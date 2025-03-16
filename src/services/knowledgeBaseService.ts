@@ -53,7 +53,7 @@ export const knowledgeBaseService = {
         return [];
       }
       
-      const knowledgeBases = results.map(kb => ({
+      const knowledgeBases = results.map((kb: any) => ({
         id: kb.id,
         chatbotId: kb.chatbot_id,
         name: kb.name,
@@ -62,7 +62,9 @@ export const knowledgeBaseService = {
         content: kb.content,
         filePath: kb.file_path,
         createdAt: kb.created_at,
-        updatedAt: kb.updated_at
+        updatedAt: kb.updated_at,
+        urls: [] as KnowledgeBaseUrl[],
+        faqs: [] as KnowledgeBaseFaq[]
       }));
       
       // For each knowledge base, fetch related URLs and FAQs
@@ -88,13 +90,13 @@ export const knowledgeBaseService = {
         return null;
       }
       
-      const kb = results[0];
+      const kb = results[0] as any;
       const knowledgeBase = {
         id: kb.id,
         chatbotId: kb.chatbot_id,
         name: kb.name,
-        type: kb.type,
-        status: kb.status,
+        type: kb.type as 'website' | 'file' | 'text' | 'faq',
+        status: kb.status as 'active' | 'processing' | 'error' | 'inactive',
         content: kb.content,
         filePath: kb.file_path,
         createdAt: kb.created_at,
@@ -239,11 +241,11 @@ export const knowledgeBaseService = {
         return [];
       }
       
-      return results.map(url => ({
+      return results.map((url: any) => ({
         id: url.id,
         knowledgeBaseId: url.knowledge_base_id,
         url: url.url,
-        status: url.status,
+        status: url.status as 'pending' | 'crawled' | 'error',
         lastCrawled: url.last_crawled,
         errorMessage: url.error_message,
         createdAt: url.created_at,
@@ -275,7 +277,7 @@ export const knowledgeBaseService = {
         return null;
       }
       
-      const urlData = results[0];
+      const urlData = results[0] as any;
       return {
         id: urlData.id,
         knowledgeBaseId: urlData.knowledge_base_id,
@@ -328,7 +330,7 @@ export const knowledgeBaseService = {
         return [];
       }
       
-      return results.map(faq => ({
+      return results.map((faq: any) => ({
         id: faq.id,
         knowledgeBaseId: faq.knowledge_base_id,
         question: faq.question,
@@ -362,7 +364,7 @@ export const knowledgeBaseService = {
         return null;
       }
       
-      const faqData = results[0];
+      const faqData = results[0] as any;
       return {
         id: faqData.id,
         knowledgeBaseId: faqData.knowledge_base_id,
