@@ -19,6 +19,18 @@ export interface Chatbot {
   leadForm?: any;
 }
 
+// Define API response types
+interface ApiSuccessResponseWithData {
+  success: boolean;
+  data: any;
+  message?: string; // Optional message property
+}
+
+interface ApiSuccessResponse {
+  success: boolean;
+  message?: string; // Optional message property
+}
+
 interface ChatbotContextType {
   chatbots: Chatbot[];
   isLoading: boolean;
@@ -47,12 +59,12 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const userId = localStorage.getItem('userId');
       
       // Pass the userId to the getAllChatbots method
-      const response = await api.chatbots.getAllChatbots(userId);
+      const response = await api.chatbots.getAllChatbots(userId) as ApiSuccessResponseWithData;
       if (response.success) {
         setChatbots(response.data);
       } else {
         // Handle case where success is false
-        const errorMessage = typeof response.message === 'string' ? response.message : "Failed to fetch chatbots";
+        const errorMessage = response.message || "Failed to fetch chatbots";
         setError(errorMessage);
         toast.error(errorMessage);
       }
@@ -75,14 +87,14 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const addChatbot = async (newChatbot: Omit<Chatbot, "id" | "createdAt" | "conversations" | "leads" | "status">) => {
     try {
-      const response = await api.chatbots.createChatbot(newChatbot);
+      const response = await api.chatbots.createChatbot(newChatbot) as ApiSuccessResponseWithData;
       
       if (response.success) {
         setChatbots(prev => [...prev, response.data]);
         return response.data;
       } else {
         // Handle case where success is false
-        const errorMessage = typeof response.message === 'string' ? response.message : "Failed to create chatbot";
+        const errorMessage = response.message || "Failed to create chatbot";
         toast.error(errorMessage);
         throw new Error(errorMessage);
       }
@@ -99,7 +111,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateChatbot = async (id: string, updates: Partial<Chatbot>) => {
     try {
-      const response = await api.chatbots.updateChatbot(id, updates);
+      const response = await api.chatbots.updateChatbot(id, updates) as ApiSuccessResponseWithData;
       
       if (response.success) {
         setChatbots(prev => 
@@ -109,7 +121,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
         );
       } else {
         // Handle case where success is false
-        const errorMessage = typeof response.message === 'string' ? response.message : "Failed to update chatbot";
+        const errorMessage = response.message || "Failed to update chatbot";
         toast.error(errorMessage);
       }
     } catch (err) {
@@ -120,14 +132,14 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteChatbot = async (id: string) => {
     try {
-      const response = await api.chatbots.deleteChatbot(id);
+      const response = await api.chatbots.deleteChatbot(id) as ApiSuccessResponse;
       
       if (response.success) {
         setChatbots(prev => prev.filter(chatbot => chatbot.id !== id));
         toast.success("Chatbot deleted successfully");
       } else {
         // Handle case where success is false
-        const errorMessage = typeof response.message === 'string' ? response.message : "Failed to delete chatbot";
+        const errorMessage = response.message || "Failed to delete chatbot";
         toast.error(errorMessage);
       }
     } catch (err) {
