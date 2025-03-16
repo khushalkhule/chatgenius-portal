@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 // Define base URL for the API
@@ -6,6 +7,13 @@ const API_BASE_URL = 'http://localhost:5000/api';
 // Define types for API request options
 interface ApiRequestOptions extends RequestInit {
   headers?: Record<string, string>;
+}
+
+// Define consistent API response type
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
 }
 
 // Get the authentication token from localStorage
@@ -150,7 +158,10 @@ export const chatbotService = {
       return { success: true, data: response.lead };
     } catch (error) {
       console.error('Error adding lead:', error);
-      return { success: false, error: error.message || 'Failed to submit lead' };
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to submit lead' 
+      };
     }
   }
 };
@@ -531,7 +542,10 @@ export const subscriptionService = {
       const userId = localStorage.getItem('userId');
       
       if (!userId) {
-        throw new Error('User not authenticated');
+        return { 
+          success: false, 
+          message: 'User not authenticated' 
+        };
       }
       
       const subscription = await subscriptionService.getUserSubscription(userId);
@@ -583,7 +597,7 @@ export const subscriptionService = {
       console.error('Error getting subscription:', error);
       return { 
         success: false, 
-        error: error.message || 'Failed to fetch subscription' 
+        message: error instanceof Error ? error.message : 'Failed to fetch subscription' 
       };
     }
   }
@@ -610,7 +624,11 @@ export const adminService = {
         apiGrowth: 24
       };
       
-      return { success: true, data: mockStats };
+      return { 
+        success: true, 
+        data: mockStats,
+        message: 'Using fallback data' 
+      };
     }
   }
 };

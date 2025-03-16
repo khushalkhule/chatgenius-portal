@@ -51,8 +51,10 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (response.success) {
         setChatbots(response.data);
       } else {
-        setError(response.error || "Failed to fetch chatbots");
-        toast.error("Failed to load chatbots");
+        // Handle case where success is false but no error property exists
+        const errorMessage = response.message || "Failed to fetch chatbots";
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
@@ -79,8 +81,10 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setChatbots(prev => [...prev, response.data]);
         return response.data;
       } else {
-        toast.error(response.error || "Failed to create chatbot");
-        throw new Error(response.error || "Failed to create chatbot");
+        // Handle case where success is false but no error property exists
+        const errorMessage = response.message || "Failed to create chatbot";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create chatbot";
@@ -104,7 +108,9 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
           )
         );
       } else {
-        toast.error(response.error || "Failed to update chatbot");
+        // Handle case where success is false but no error property exists
+        const errorMessage = response.message || "Failed to update chatbot";
+        toast.error(errorMessage);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to update chatbot";
@@ -120,7 +126,9 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setChatbots(prev => prev.filter(chatbot => chatbot.id !== id));
         toast.success("Chatbot deleted successfully");
       } else {
-        toast.error(response.error || "Failed to delete chatbot");
+        // Handle case where success is false but no error property exists
+        const errorMessage = response.message || "Failed to delete chatbot";
+        toast.error(errorMessage);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete chatbot";

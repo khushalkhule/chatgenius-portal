@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -88,7 +89,9 @@ const DashboardOverview = () => {
         if (response.success) {
           setStats(response.data);
         } else {
-          toast.error(response.error || "Failed to fetch dashboard statistics");
+          // Handle case where success is false but no error property exists
+          const errorMessage = response.message || "Failed to fetch dashboard statistics";
+          toast.error(errorMessage);
         }
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
