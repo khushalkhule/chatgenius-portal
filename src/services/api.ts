@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 // Define base URL for the API
@@ -8,15 +9,29 @@ interface ApiRequestOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
+// Get the authentication token from localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
+
 // Helper function for making API requests
 const apiRequest = async (endpoint: string, options: ApiRequestOptions = {}) => {
   try {
+    // Get the auth token
+    const token = getAuthToken();
+    
+    // Add auth header if token exists
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      // During development, we can use this to skip auth
+      // 'x-skip-auth': 'development',
+      ...(options.headers || {})
+    };
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      }
+      headers
     });
     
     const data = await response.json();
@@ -155,11 +170,17 @@ export const userService = {
   
   createUser: async (user) => {
     try {
-      const { user: newUser } = await apiRequest('/users/register', {
+      const response = await apiRequest('/users/register', {
         method: 'POST',
         body: JSON.stringify(user)
       });
-      return newUser;
+      
+      // Save auth token if returned
+      if (response.token) {
+        localStorage.setItem('authToken', response.token);
+      }
+      
+      return response.user;
     } catch (error) {
       console.error('Error creating user:', error);
       // Fallback to localStorage
@@ -221,15 +242,30 @@ export const userService = {
   
   loginUser: async (email, password) => {
     try {
-      const { user } = await apiRequest('/users/login', {
+      const response = await apiRequest('/users/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
       });
-      return user;
+      
+      // Save auth token and user data
+      if (response.token) {
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('userId', response.user.id);
+      }
+      
+      return response.user;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
     }
+  },
+  
+  logoutUser: () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userId');
+    return { success: true };
   }
 };
 
@@ -249,7 +285,7 @@ export const subscriptionService = {
           id: "1",
           name: "Free",
           price: "$0",
-          priceValue: 0,
+          price_value: 0,
           period: "month",
           chatbots: 1,
           api_calls: 100,
@@ -263,10 +299,10 @@ export const subscriptionService = {
           id: "2",
           name: "Pro",
           price: "$29",
-          priceValue: 29,
+          price_value: 29,
           period: "month",
-          priceMonthly: "$29",
-          priceMonthlyValue: 29,
+          price_monthly: "$29",
+          price_monthly_value: 29,
           chatbots: 5,
           api_calls: 1000,
           storage: 10,
@@ -279,10 +315,10 @@ export const subscriptionService = {
           id: "3",
           name: "Enterprise",
           price: "$99",
-          priceValue: 99,
+          price_value: 99,
           period: "month",
-          priceMonthly: "$99",
-          priceMonthlyValue: 99,
+          price_monthly: "$99",
+          price_monthly_value: 99,
           chatbots: 20,
           api_calls: 5000,
           storage: 50,
