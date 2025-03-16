@@ -1,6 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import db from './database';
+import { RowDataPacket } from 'mysql2';
 
 interface KnowledgeBase {
   id: string;
@@ -36,6 +37,11 @@ interface KnowledgeBaseFaq {
   updatedAt: string;
 }
 
+// Helper function to check if result is an array
+const isArray = (result: any): result is any[] => {
+  return Array.isArray(result);
+};
+
 export const knowledgeBaseService = {
   // Get all knowledge bases for a chatbot
   getKnowledgeBasesByChatbotId: async (chatbotId: string): Promise<KnowledgeBase[]> => {
@@ -43,7 +49,7 @@ export const knowledgeBaseService = {
       const sql = 'SELECT * FROM knowledge_bases WHERE chatbot_id = ?';
       const results = await db.query(sql, [chatbotId]);
       
-      if (!db.isRowDataPacketArray(results)) {
+      if (!isArray(results)) {
         return [];
       }
       
@@ -78,7 +84,7 @@ export const knowledgeBaseService = {
       const sql = 'SELECT * FROM knowledge_bases WHERE id = ?';
       const results = await db.query(sql, [id]);
       
-      if (!db.isRowDataPacketArray(results) || results.length === 0) {
+      if (!isArray(results) || results.length === 0) {
         return null;
       }
       
@@ -229,7 +235,7 @@ export const knowledgeBaseService = {
       const sql = 'SELECT * FROM knowledge_base_urls WHERE knowledge_base_id = ?';
       const results = await db.query(sql, [knowledgeBaseId]);
       
-      if (!db.isRowDataPacketArray(results)) {
+      if (!isArray(results)) {
         return [];
       }
       
@@ -265,7 +271,7 @@ export const knowledgeBaseService = {
         [id]
       );
       
-      if (!db.isRowDataPacketArray(results) || results.length === 0) {
+      if (!isArray(results) || results.length === 0) {
         return null;
       }
       
@@ -274,7 +280,7 @@ export const knowledgeBaseService = {
         id: urlData.id,
         knowledgeBaseId: urlData.knowledge_base_id,
         url: urlData.url,
-        status: urlData.status,
+        status: urlData.status as 'pending' | 'crawled' | 'error',
         lastCrawled: urlData.last_crawled,
         errorMessage: urlData.error_message,
         createdAt: urlData.created_at,
@@ -318,7 +324,7 @@ export const knowledgeBaseService = {
       const sql = 'SELECT * FROM knowledge_base_faqs WHERE knowledge_base_id = ?';
       const results = await db.query(sql, [knowledgeBaseId]);
       
-      if (!db.isRowDataPacketArray(results)) {
+      if (!isArray(results)) {
         return [];
       }
       
@@ -352,7 +358,7 @@ export const knowledgeBaseService = {
         [id]
       );
       
-      if (!db.isRowDataPacketArray(results) || results.length === 0) {
+      if (!isArray(results) || results.length === 0) {
         return null;
       }
       
