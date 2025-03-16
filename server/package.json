@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "setup": "node setup-db.js"
+    "setup": "npm install && node setup-db.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

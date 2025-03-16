@@ -10,22 +10,24 @@ This application uses MySQL as the database. The database connection is configur
 ## Getting Started
 
 1. Make sure you have Node.js installed on your machine.
-2. Set up your MySQL database and configure the connection in `index.js`.
-3. Run the database setup script to create the necessary tables and seed data:
-
-```bash
-npm run setup
-```
+2. Navigate to the server directory:
+   ```bash
+   cd server
+   ```
+3. Install dependencies and set up the database:
+   ```bash
+   npm run setup
+   ```
+   This will install all required dependencies and create the necessary tables and seed data.
 
 4. Start the server:
+   ```bash
+   # Development mode with auto-reload
+   npm run dev
 
-```bash
-# Development mode with auto-reload
-npm run dev
-
-# Production mode
-npm start
-```
+   # Production mode
+   npm start
+   ```
 
 The server will start on port 5000 by default. You can change this by setting the `PORT` environment variable.
 
