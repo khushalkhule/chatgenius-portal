@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +13,26 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { knowledgeBaseService } from "@/services/knowledgeBaseService";
 import { useChatbots } from "@/contexts/ChatbotContext";
+
+interface KnowledgeBaseUrl {
+  id?: string;
+  knowledgeBaseId?: string;
+  url: string;
+  status?: 'pending' | 'crawled' | 'error';
+  lastCrawled?: string;
+  errorMessage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface KnowledgeBaseFaq {
+  id?: string;
+  knowledgeBaseId?: string;
+  question: string;
+  answer: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 const websiteSchema = z.object({
   sourceType: z.literal("website"),
@@ -95,23 +114,26 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
 
   const handleSubmit = async (data: FormValues) => {
     if (data.sourceType === "existing") {
-      // Just pass the selected knowledge base ID to the next step
       onNext(data);
       return;
     }
     
-    // For new knowledge bases
     try {
       if (chatbotId) {
         let newKnowledgeBase;
         
         if (data.sourceType === "website") {
+          const urlObject: KnowledgeBaseUrl = {
+            url: data.url,
+            status: 'pending'
+          };
+          
           newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
             chatbotId,
             name: `Website KB - ${new URL(data.url).hostname}`,
             type: "website",
             status: "active",
-            urls: [{ url: data.url }]
+            urls: [urlObject]
           });
         } else if (data.sourceType === "file") {
           newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
@@ -130,10 +152,14 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
             content: data.content
           });
         } else if (data.sourceType === "faq") {
-          // Parse FAQs from JSON string
-          let faqs = [];
+          let faqsData = [];
           try {
-            faqs = JSON.parse(data.faqs);
+            const parsedFaqs = JSON.parse(data.faqs);
+            
+            faqsData = parsedFaqs.map((faq: any) => ({
+              question: faq.question,
+              answer: faq.answer
+            }));
           } catch (e) {
             toast.error("Invalid FAQ format. Please use valid JSON.");
             return;
@@ -144,20 +170,18 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
             name: `FAQ KB - ${new Date().toLocaleDateString()}`,
             type: "faq",
             status: "active",
-            faqs
+            faqs: faqsData
           });
         }
         
         if (newKnowledgeBase) {
           toast.success("Knowledge base created successfully");
-          // Pass the new knowledge base ID to the next step
           onNext({
             sourceType: "existing",
             knowledgeBaseId: newKnowledgeBase.id
           });
         }
       } else {
-        // If no chatbotId, just pass the form data to the next step
         onNext(data);
       }
     } catch (error) {
