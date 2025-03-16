@@ -13,6 +13,7 @@ import ChatbotsPage from "./pages/ChatbotsPage";
 import ChatbotManager from "./pages/ChatbotManager";
 import ChatbotPreview from "./pages/ChatbotPreview";
 import ChatbotEditor from "./pages/ChatbotEditor";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import SignIn from "./pages/SignIn";
 import AdminSignIn from "./pages/AdminSignIn";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/chatbot/:id" element={<ChatbotManager />} />
             <Route path="/chatbot/:id/preview" element={<ChatbotPreview />} />
             <Route path="/chatbot/:id/edit" element={<ChatbotEditor />} />
+            <Route path="/chatbot/:id/knowledge-base" element={<KnowledgeBasePage />} />
             
             {/* Authentication routes */}
             <Route path="/sign-in" element={<SignIn />} />

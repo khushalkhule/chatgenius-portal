@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
@@ -356,6 +355,456 @@ app.delete('/api/chatbots/:id', authenticateUser, async (req, res) => {
   }
 });
 
+// Knowledge Base API endpoints
+app.get('/api/knowledge-bases/chatbot/:chatbotId', authenticateUser, async (req, res) => {
+  const { chatbotId } = req.params;
+  
+  try {
+    // First, check if the chatbot belongs to the authenticated user
+    const [chatbots] = await pool.execute('SELECT user_id FROM chatbots WHERE id = ?', [chatbotId]);
+    
+    if (chatbots.length === 0) {
+      return res.status(404).json({ success: false, message: 'Chatbot not found' });
+    }
+    
+    if (req.userId && req.userId !== chatbots[0].user_id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Get all knowledge bases for this chatbot
+    const [knowledgeBases] = await pool.execute(
+      'SELECT * FROM knowledge_bases WHERE chatbot_id = ?',
+      [chatbotId]
+    );
+    
+    // For each knowledge base, get its URLs and FAQs
+    const result = [];
+    
+    for (const kb of knowledgeBases) {
+      const [urls] = await pool.execute(
+        'SELECT * FROM knowledge_base_urls WHERE knowledge_base_id = ?',
+        [kb.id]
+      );
+      
+      const [faqs] = await pool.execute(
+        'SELECT * FROM knowledge_base_faqs WHERE knowledge_base_id = ?',
+        [kb.id]
+      );
+      
+      result.push({
+        id: kb.id,
+        chatbotId: kb.chatbot_id,
+        name: kb.name,
+        type: kb.type,
+        status: kb.status,
+        content: kb.content,
+        filePath: kb.file_path,
+        createdAt: kb.created_at,
+        updatedAt: kb.updated_at,
+        urls,
+        faqs
+      });
+    }
+    
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Get knowledge bases error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get knowledge bases', error: error.message });
+  }
+});
+
+app.get('/api/knowledge-bases/:id', authenticateUser, async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // Get the knowledge base
+    const [knowledgeBases] = await pool.execute('SELECT * FROM knowledge_bases WHERE id = ?', [id]);
+    
+    if (knowledgeBases.length === 0) {
+      return res.status(404).json({ success: false, message: 'Knowledge base not found' });
+    }
+    
+    // Check if the chatbot belongs to the authenticated user
+    const chatbotId = knowledgeBases[0].chatbot_id;
+    const [chatbots] = await pool.execute('SELECT user_id FROM chatbots WHERE id = ?', [chatbotId]);
+    
+    if (chatbots.length === 0) {
+      return res.status(404).json({ success: false, message: 'Chatbot not found' });
+    }
+    
+    if (req.userId && req.userId !== chatbots[0].user_id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Get URLs and FAQs
+    const [urls] = await pool.execute(
+      'SELECT * FROM knowledge_base_urls WHERE knowledge_base_id = ?',
+      [id]
+    );
+    
+    const [faqs] = await pool.execute(
+      'SELECT * FROM knowledge_base_faqs WHERE knowledge_base_id = ?',
+      [id]
+    );
+    
+    const result = {
+      id: knowledgeBases[0].id,
+      chatbotId: knowledgeBases[0].chatbot_id,
+      name: knowledgeBases[0].name,
+      type: knowledgeBases[0].type,
+      status: knowledgeBases[0].status,
+      content: knowledgeBases[0].content,
+      filePath: knowledgeBases[0].file_path,
+      createdAt: knowledgeBases[0].created_at,
+      updatedAt: knowledgeBases[0].updated_at,
+      urls,
+      faqs
+    };
+    
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Get knowledge base error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get knowledge base', error: error.message });
+  }
+});
+
+app.post('/api/knowledge-bases', authenticateUser, async (req, res) => {
+  const { chatbotId, name, type, status, content, filePath, urls, faqs } = req.body;
+  
+  try {
+    // Check if the chatbot belongs to the authenticated user
+    const [chatbots] = await pool.execute('SELECT user_id FROM chatbots WHERE id = ?', [chatbotId]);
+    
+    if (chatbots.length === 0) {
+      return res.status(404).json({ success: false, message: 'Chatbot not found' });
+    }
+    
+    if (req.userId && req.userId !== chatbots[0].user_id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Begin transaction
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    
+    try {
+      // Create the knowledge base
+      const id = uuidv4();
+      await connection.execute(
+        `INSERT INTO knowledge_bases (id, chatbot_id, name, type, status, content, file_path)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, chatbotId, name, type, status || 'active', content || null, filePath || null]
+      );
+      
+      // Add URLs if provided
+      if (type === 'website' && urls && urls.length > 0) {
+        for (const url of urls) {
+          const urlId = uuidv4();
+          await connection.execute(
+            `INSERT INTO knowledge_base_urls (id, knowledge_base_id, url, status)
+             VALUES (?, ?, ?, ?)`,
+            [urlId, id, url.url, 'pending']
+          );
+        }
+      }
+      
+      // Add FAQs if provided
+      if (type === 'faq' && faqs && faqs.length > 0) {
+        for (const faq of faqs) {
+          const faqId = uuidv4();
+          await connection.execute(
+            `INSERT INTO knowledge_base_faqs (id, knowledge_base_id, question, answer)
+             VALUES (?, ?, ?, ?)`,
+            [faqId, id, faq.question, faq.answer]
+          );
+        }
+      }
+      
+      // Commit transaction
+      await connection.commit();
+      
+      // Get the created knowledge base with its URLs and FAQs
+      const [knowledgeBases] = await pool.execute('SELECT * FROM knowledge_bases WHERE id = ?', [id]);
+      const [createdUrls] = await pool.execute('SELECT * FROM knowledge_base_urls WHERE knowledge_base_id = ?', [id]);
+      const [createdFaqs] = await pool.execute('SELECT * FROM knowledge_base_faqs WHERE knowledge_base_id = ?', [id]);
+      
+      const result = {
+        id: knowledgeBases[0].id,
+        chatbotId: knowledgeBases[0].chatbot_id,
+        name: knowledgeBases[0].name,
+        type: knowledgeBases[0].type,
+        status: knowledgeBases[0].status,
+        content: knowledgeBases[0].content,
+        filePath: knowledgeBases[0].file_path,
+        createdAt: knowledgeBases[0].created_at,
+        updatedAt: knowledgeBases[0].updated_at,
+        urls: createdUrls,
+        faqs: createdFaqs
+      };
+      
+      res.status(201).json({ success: true, message: 'Knowledge base created successfully', data: result });
+    } catch (error) {
+      // Roll back transaction on error
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Create knowledge base error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create knowledge base', error: error.message });
+  }
+});
+
+app.put('/api/knowledge-bases/:id', authenticateUser, async (req, res) => {
+  const { id } = req.params;
+  const { name, status, content, filePath, urls, faqs } = req.body;
+  
+  try {
+    // Check if the knowledge base exists
+    const [knowledgeBases] = await pool.execute('SELECT * FROM knowledge_bases WHERE id = ?', [id]);
+    
+    if (knowledgeBases.length === 0) {
+      return res.status(404).json({ success: false, message: 'Knowledge base not found' });
+    }
+    
+    // Check if the chatbot belongs to the authenticated user
+    const chatbotId = knowledgeBases[0].chatbot_id;
+    const [chatbots] = await pool.execute('SELECT user_id FROM chatbots WHERE id = ?', [chatbotId]);
+    
+    if (chatbots.length === 0) {
+      return res.status(404).json({ success: false, message: 'Chatbot not found' });
+    }
+    
+    if (req.userId && req.userId !== chatbots[0].user_id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Begin transaction
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    
+    try {
+      // Update the knowledge base
+      const updateFields = [];
+      const params = [];
+      
+      if (name !== undefined) {
+        updateFields.push('name = ?');
+        params.push(name);
+      }
+      
+      if (status !== undefined) {
+        updateFields.push('status = ?');
+        params.push(status);
+      }
+      
+      if (content !== undefined) {
+        updateFields.push('content = ?');
+        params.push(content);
+      }
+      
+      if (filePath !== undefined) {
+        updateFields.push('file_path = ?');
+        params.push(filePath);
+      }
+      
+      updateFields.push('updated_at = NOW()');
+      
+      if (updateFields.length > 0) {
+        const sql = `UPDATE knowledge_bases SET ${updateFields.join(', ')} WHERE id = ?`;
+        params.push(id);
+        await connection.execute(sql, params);
+      }
+      
+      // Update URLs if provided
+      if (urls !== undefined) {
+        // Delete existing URLs
+        await connection.execute('DELETE FROM knowledge_base_urls WHERE knowledge_base_id = ?', [id]);
+        
+        // Add new URLs
+        if (urls.length > 0) {
+          for (const url of urls) {
+            const urlId = uuidv4();
+            await connection.execute(
+              `INSERT INTO knowledge_base_urls (id, knowledge_base_id, url, status)
+               VALUES (?, ?, ?, ?)`,
+              [urlId, id, url.url, url.status || 'pending']
+            );
+          }
+        }
+      }
+      
+      // Update FAQs if provided
+      if (faqs !== undefined) {
+        // Delete existing FAQs
+        await connection.execute('DELETE FROM knowledge_base_faqs WHERE knowledge_base_id = ?', [id]);
+        
+        // Add new FAQs
+        if (faqs.length > 0) {
+          for (const faq of faqs) {
+            const faqId = uuidv4();
+            await connection.execute(
+              `INSERT INTO knowledge_base_faqs (id, knowledge_base_id, question, answer)
+               VALUES (?, ?, ?, ?)`,
+              [faqId, id, faq.question, faq.answer]
+            );
+          }
+        }
+      }
+      
+      // Commit transaction
+      await connection.commit();
+      
+      // Get the updated knowledge base with its URLs and FAQs
+      const [updatedKnowledgeBases] = await pool.execute('SELECT * FROM knowledge_bases WHERE id = ?', [id]);
+      const [updatedUrls] = await pool.execute('SELECT * FROM knowledge_base_urls WHERE knowledge_base_id = ?', [id]);
+      const [updatedFaqs] = await pool.execute('SELECT * FROM knowledge_base_faqs WHERE knowledge_base_id = ?', [id]);
+      
+      const result = {
+        id: updatedKnowledgeBases[0].id,
+        chatbotId: updatedKnowledgeBases[0].chatbot_id,
+        name: updatedKnowledgeBases[0].name,
+        type: updatedKnowledgeBases[0].type,
+        status: updatedKnowledgeBases[0].status,
+        content: updatedKnowledgeBases[0].content,
+        filePath: updatedKnowledgeBases[0].file_path,
+        createdAt: updatedKnowledgeBases[0].created_at,
+        updatedAt: updatedKnowledgeBases[0].updated_at,
+        urls: updatedUrls,
+        faqs: updatedFaqs
+      };
+      
+      res.json({ success: true, message: 'Knowledge base updated successfully', data: result });
+    } catch (error) {
+      // Roll back transaction on error
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Update knowledge base error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update knowledge base', error: error.message });
+  }
+});
+
+app.delete('/api/knowledge-bases/:id', authenticateUser, async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // Check if the knowledge base exists
+    const [knowledgeBases] = await pool.execute('SELECT * FROM knowledge_bases WHERE id = ?', [id]);
+    
+    if (knowledgeBases.length === 0) {
+      return res.status(404).json({ success: false, message: 'Knowledge base not found' });
+    }
+    
+    // Check if the chatbot belongs to the authenticated user
+    const chatbotId = knowledgeBases[0].chatbot_id;
+    const [chatbots] = await pool.execute('SELECT user_id FROM chatbots WHERE id = ?', [chatbotId]);
+    
+    if (chatbots.length === 0) {
+      return res.status(404).json({ success: false, message: 'Chatbot not found' });
+    }
+    
+    if (req.userId && req.userId !== chatbots[0].user_id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Begin transaction
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    
+    try {
+      // Delete related URLs
+      await connection.execute('DELETE FROM knowledge_base_urls WHERE knowledge_base_id = ?', [id]);
+      
+      // Delete related FAQs
+      await connection.execute('DELETE FROM knowledge_base_faqs WHERE knowledge_base_id = ?', [id]);
+      
+      // Delete the knowledge base
+      await connection.execute('DELETE FROM knowledge_bases WHERE id = ?', [id]);
+      
+      // Commit transaction
+      await connection.commit();
+      
+      res.json({ success: true, message: 'Knowledge base deleted successfully' });
+    } catch (error) {
+      // Roll back transaction on error
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Delete knowledge base error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete knowledge base', error: error.message });
+  }
+});
+
+// URL management endpoints
+app.put('/api/knowledge-base-urls/:id/status', authenticateUser, async (req, res) => {
+  const { id } = req.params;
+  const { status, errorMessage } = req.body;
+  
+  if (!['pending', 'crawled', 'error'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid status' });
+  }
+  
+  try {
+    // Get the URL to check ownership
+    const [urls] = await pool.execute('SELECT * FROM knowledge_base_urls WHERE id = ?', [id]);
+    
+    if (urls.length === 0) {
+      return res.status(404).json({ success: false, message: 'URL not found' });
+    }
+    
+    // Get the knowledge base
+    const knowledgeBaseId = urls[0].knowledge_base_id;
+    const [knowledgeBases] = await pool.execute('SELECT * FROM knowledge_bases WHERE id = ?', [knowledgeBaseId]);
+    
+    if (knowledgeBases.length === 0) {
+      return res.status(404).json({ success: false, message: 'Knowledge base not found' });
+    }
+    
+    // Check chatbot ownership
+    const chatbotId = knowledgeBases[0].chatbot_id;
+    const [chatbots] = await pool.execute('SELECT user_id FROM chatbots WHERE id = ?', [chatbotId]);
+    
+    if (chatbots.length === 0) {
+      return res.status(404).json({ success: false, message: 'Chatbot not found' });
+    }
+    
+    if (req.userId && req.userId !== chatbots[0].user_id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Update URL status
+    let sql = 'UPDATE knowledge_base_urls SET status = ?';
+    const params = [status];
+    
+    if (status === 'crawled') {
+      sql += ', last_crawled = NOW()';
+    }
+    
+    if (status === 'error' && errorMessage) {
+      sql += ', error_message = ?';
+      params.push(errorMessage);
+    }
+    
+    sql += ', updated_at = NOW() WHERE id = ?';
+    params.push(id);
+    
+    await pool.execute(sql, params);
+    
+    res.json({ success: true, message: 'URL status updated successfully' });
+  } catch (error) {
+    console.error('Update URL status error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update URL status', error: error.message });
+  }
+});
+
 // Subscription plan endpoints
 app.get('/api/subscription-plans', async (req, res) => {
   try {
@@ -386,153 +835,4 @@ app.get('/api/subscription-plans/:id', async (req, res) => {
     const [plans] = await pool.execute('SELECT * FROM subscription_plans WHERE id = ?', [id]);
     
     if (plans.length === 0) {
-      return res.status(404).json({ success: false, message: 'Plan not found' });
-    }
-    
-    const plan = plans[0];
-    const formattedPlan = {
-      ...plan,
-      price_value: Number(plan.price_value),
-      price_monthly_value: plan.price_monthly_value ? Number(plan.price_monthly_value) : undefined,
-      chatbots: Number(plan.chatbots),
-      api_calls: Number(plan.api_calls),
-      storage: Number(plan.storage),
-      features: plan.features ? JSON.parse(plan.features) : []
-    };
-    
-    res.json({ success: true, plan: formattedPlan });
-  } catch (error) {
-    console.error('Get plan error:', error);
-    res.status(500).json({ success: false, message: 'Failed to get plan', error: error.message });
-  }
-});
-
-app.get('/api/user-subscription/:userId', authenticateUser, async (req, res) => {
-  const { userId } = req.params;
-  
-  // Check if authenticated user matches the requested user
-  if (req.userId && req.userId !== userId) {
-    return res.status(403).json({ success: false, message: 'Access denied' });
-  }
-  
-  try {
-    const [subscriptions] = await pool.execute('SELECT * FROM user_subscriptions WHERE user_id = ?', [userId]);
-    
-    if (subscriptions.length === 0) {
-      return res.status(404).json({ success: false, message: 'Subscription not found' });
-    }
-    
-    const subscription = subscriptions[0];
-    
-    // Get the plan details
-    const [plans] = await pool.execute('SELECT * FROM subscription_plans WHERE id = ?', [subscription.plan_id]);
-    
-    if (plans.length === 0) {
-      return res.status(404).json({ success: false, message: 'Plan not found' });
-    }
-    
-    const plan = plans[0];
-    const formattedPlan = {
-      ...plan,
-      price_value: Number(plan.price_value),
-      price_monthly_value: plan.price_monthly_value ? Number(plan.price_monthly_value) : undefined,
-      chatbots: Number(plan.chatbots),
-      api_calls: Number(plan.api_calls),
-      storage: Number(plan.storage),
-      features: plan.features ? JSON.parse(plan.features) : []
-    };
-    
-    res.json({
-      success: true,
-      subscription: {
-        id: subscription.id,
-        userId: subscription.user_id,
-        planId: subscription.plan_id,
-        status: subscription.status,
-        createdAt: subscription.created_at,
-        updatedAt: subscription.updated_at,
-        planInfo: formattedPlan
-      }
-    });
-  } catch (error) {
-    console.error('Get user subscription error:', error);
-    res.status(500).json({ success: false, message: 'Failed to get user subscription', error: error.message });
-  }
-});
-
-app.put('/api/user-subscription/:userId', authenticateUser, async (req, res) => {
-  const { userId } = req.params;
-  const { planId } = req.body;
-  
-  // Check if authenticated user matches the requested user
-  if (req.userId && req.userId !== userId) {
-    return res.status(403).json({ success: false, message: 'Access denied' });
-  }
-  
-  try {
-    // Check if plan exists
-    const [plans] = await pool.execute('SELECT * FROM subscription_plans WHERE id = ?', [planId]);
-    
-    if (plans.length === 0) {
-      return res.status(404).json({ success: false, message: 'Plan not found' });
-    }
-    
-    // Check if user subscription exists
-    const [subscriptions] = await pool.execute('SELECT * FROM user_subscriptions WHERE user_id = ?', [userId]);
-    
-    if (subscriptions.length === 0) {
-      // Create new subscription
-      const subscriptionId = uuidv4();
-      await pool.execute(
-        'INSERT INTO user_subscriptions (id, user_id, plan_id, status) VALUES (?, ?, ?, ?)',
-        [subscriptionId, userId, planId, 'active']
-      );
-    } else {
-      // Update existing subscription
-      await pool.execute(
-        'UPDATE user_subscriptions SET plan_id = ?, updated_at = NOW() WHERE user_id = ?',
-        [planId, userId]
-      );
-    }
-    
-    // Get the updated subscription
-    const [updatedSubscriptions] = await pool.execute('SELECT * FROM user_subscriptions WHERE user_id = ?', [userId]);
-    const subscription = updatedSubscriptions[0];
-    
-    // Get the plan details
-    const [planDetails] = await pool.execute('SELECT * FROM subscription_plans WHERE id = ?', [planId]);
-    const plan = planDetails[0];
-    
-    const formattedPlan = {
-      ...plan,
-      price_value: Number(plan.price_value),
-      price_monthly_value: plan.price_monthly_value ? Number(plan.price_monthly_value) : undefined,
-      chatbots: Number(plan.chatbots),
-      api_calls: Number(plan.api_calls),
-      storage: Number(plan.storage),
-      features: plan.features ? JSON.parse(plan.features) : []
-    };
-    
-    res.json({
-      success: true,
-      message: 'Subscription updated successfully',
-      subscription: {
-        id: subscription.id,
-        userId: subscription.user_id,
-        planId: subscription.plan_id,
-        status: subscription.status,
-        createdAt: subscription.created_at,
-        updatedAt: subscription.updated_at,
-        planInfo: formattedPlan
-      }
-    });
-  } catch (error) {
-    console.error('Update user subscription error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update user subscription', error: error.message });
-  }
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+      return res.status(404).json({ success:

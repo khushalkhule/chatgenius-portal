@@ -1,14 +1,19 @@
 
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, Globe, List, MessageSquare, Plus, Upload } from "lucide-react";
+import { FileText, Globe, List, MessageSquare, Plus, Upload, Check, RefreshCw } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from "sonner";
+import { knowledgeBaseService } from "@/services/knowledgeBaseService";
+import { useChatbots } from "@/contexts/ChatbotContext";
 
 const websiteSchema = z.object({
   sourceType: z.literal("website"),
@@ -30,11 +35,17 @@ const faqSchema = z.object({
   faqs: z.string().min(10, "FAQs must be at least 10 characters"),
 });
 
+const existingSchema = z.object({
+  sourceType: z.literal("existing"),
+  knowledgeBaseId: z.string().min(1, "Please select a knowledge base"),
+});
+
 const formSchema = z.discriminatedUnion("sourceType", [
   websiteSchema,
   fileSchema,
   textSchema,
   faqSchema,
+  existingSchema,
 ]);
 
 type FormValues = z.infer<typeof formSchema>;
@@ -43,9 +54,14 @@ interface KnowledgeBaseStepProps {
   onNext: (data: FormValues) => void;
   onBack: () => void;
   initialData?: FormValues;
+  chatbotId?: string;
 }
 
-const KnowledgeBaseStep = ({ onNext, onBack, initialData }: KnowledgeBaseStepProps) => {
+const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: KnowledgeBaseStepProps) => {
+  const [existingKnowledgeBases, setExistingKnowledgeBases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { getChatbot } = useChatbots();
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
@@ -56,8 +72,98 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData }: KnowledgeBaseStepPro
 
   const sourceType = form.watch("sourceType");
 
-  const handleSubmit = (data: FormValues) => {
-    onNext(data);
+  useEffect(() => {
+    if (chatbotId) {
+      fetchExistingKnowledgeBases();
+    }
+  }, [chatbotId]);
+
+  const fetchExistingKnowledgeBases = async () => {
+    if (!chatbotId) return;
+    
+    setLoading(true);
+    try {
+      const data = await knowledgeBaseService.getKnowledgeBasesByChatbotId(chatbotId);
+      setExistingKnowledgeBases(data);
+    } catch (error) {
+      console.error("Error fetching knowledge bases:", error);
+      toast.error("Failed to load existing knowledge bases");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (data: FormValues) => {
+    if (data.sourceType === "existing") {
+      // Just pass the selected knowledge base ID to the next step
+      onNext(data);
+      return;
+    }
+    
+    // For new knowledge bases
+    try {
+      if (chatbotId) {
+        let newKnowledgeBase;
+        
+        if (data.sourceType === "website") {
+          newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
+            chatbotId,
+            name: `Website KB - ${new URL(data.url).hostname}`,
+            type: "website",
+            status: "active",
+            urls: [{ url: data.url }]
+          });
+        } else if (data.sourceType === "file") {
+          newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
+            chatbotId,
+            name: `File KB - ${data.file}`,
+            type: "file",
+            status: "active",
+            filePath: data.file
+          });
+        } else if (data.sourceType === "text") {
+          newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
+            chatbotId,
+            name: `Text KB - ${new Date().toLocaleDateString()}`,
+            type: "text",
+            status: "active",
+            content: data.content
+          });
+        } else if (data.sourceType === "faq") {
+          // Parse FAQs from JSON string
+          let faqs = [];
+          try {
+            faqs = JSON.parse(data.faqs);
+          } catch (e) {
+            toast.error("Invalid FAQ format. Please use valid JSON.");
+            return;
+          }
+          
+          newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
+            chatbotId,
+            name: `FAQ KB - ${new Date().toLocaleDateString()}`,
+            type: "faq",
+            status: "active",
+            faqs
+          });
+        }
+        
+        if (newKnowledgeBase) {
+          toast.success("Knowledge base created successfully");
+          // Pass the new knowledge base ID to the next step
+          onNext({
+            sourceType: "existing",
+            knowledgeBaseId: newKnowledgeBase.id
+          });
+        }
+      } else {
+        // If no chatbotId, just pass the form data to the next step
+        onNext(data);
+      }
+    } catch (error) {
+      console.error("Error creating knowledge base:", error);
+      toast.error("Failed to create knowledge base");
+    }
   };
 
   return (
@@ -72,11 +178,11 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData }: KnowledgeBaseStepPro
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs 
-              defaultValue="website" 
+              defaultValue={sourceType} 
               value={sourceType}
               onValueChange={(value) => form.setValue("sourceType", value as any)}
             >
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-5 mb-6">
                 <TabsTrigger value="website" className="flex gap-2 items-center">
                   <Globe className="h-4 w-4" /> Website
                 </TabsTrigger>
@@ -89,6 +195,11 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData }: KnowledgeBaseStepPro
                 <TabsTrigger value="faq" className="flex gap-2 items-center">
                   <List className="h-4 w-4" /> FAQ
                 </TabsTrigger>
+                {chatbotId && (
+                  <TabsTrigger value="existing" className="flex gap-2 items-center">
+                    <Check className="h-4 w-4" /> Existing
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="website">
@@ -184,6 +295,87 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData }: KnowledgeBaseStepPro
                   )}
                 />
               </TabsContent>
+
+              {chatbotId && (
+                <TabsContent value="existing">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Select Existing Knowledge Base</FormLabel>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={fetchExistingKnowledgeBases}
+                        disabled={loading}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                        Refresh
+                      </Button>
+                    </div>
+                    
+                    {loading ? (
+                      <div className="flex justify-center p-8">
+                        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : existingKnowledgeBases.length === 0 ? (
+                      <div className="text-center p-8 border rounded-lg bg-muted/50">
+                        <p className="text-muted-foreground">No knowledge bases found. Create a new one using the other tabs.</p>
+                      </div>
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="knowledgeBaseId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="space-y-4"
+                              >
+                                {existingKnowledgeBases.map((kb) => (
+                                  <div key={kb.id} className="flex items-center space-x-2 border p-4 rounded-lg hover:bg-muted/50 cursor-pointer">
+                                    <RadioGroupItem value={kb.id} id={kb.id} />
+                                    <div className="grid gap-1">
+                                      <label
+                                        htmlFor={kb.id}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                                      >
+                                        {kb.name}
+                                        <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                                          {kb.type}
+                                        </span>
+                                        <span className={`text-xs px-2 py-1 rounded-full ${
+                                          kb.status === "active" ? "bg-green-100 text-green-800" :
+                                          kb.status === "processing" ? "bg-yellow-100 text-yellow-800" :
+                                          kb.status === "error" ? "bg-red-100 text-red-800" :
+                                          "bg-gray-100 text-gray-800"
+                                        }`}>
+                                          {kb.status}
+                                        </span>
+                                      </label>
+                                      <p className="text-sm text-muted-foreground">
+                                        {kb.type === "website" && kb.urls && kb.urls.length > 0 && 
+                                          `${kb.urls.length} URL${kb.urls.length !== 1 ? 's' : ''}`}
+                                        {kb.type === "faq" && kb.faqs && kb.faqs.length > 0 && 
+                                          `${kb.faqs.length} FAQ${kb.faqs.length !== 1 ? 's' : ''}`}
+                                        {kb.type === "text" && 
+                                          `Text content: ${kb.content?.substring(0, 50)}${kb.content?.length > 50 ? '...' : ''}`}
+                                        {kb.type === "file" && `File: ${kb.filePath}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
 
             <div className="flex justify-between">
