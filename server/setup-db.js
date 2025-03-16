@@ -152,10 +152,12 @@ async function setupDatabase() {
           }
         };
 
+        const chatbotId = 'chatbot-1';
+        
         await connection.execute(
           'INSERT INTO chatbots (id, user_id, name, description, status, configuration) VALUES (?, ?, ?, ?, ?, ?)',
           [
-            'chatbot-1',
+            chatbotId,
             clientId,
             'Sample Chatbot',
             'A sample chatbot for demonstration',
@@ -165,6 +167,44 @@ async function setupDatabase() {
         );
 
         console.log('Sample chatbot created for demo user');
+        
+        // Create sample conversation data
+        const conversationId = uuidv4();
+        await connection.execute(
+          'INSERT INTO conversations (id, chatbot_id, user_identifier, message_count, status) VALUES (?, ?, ?, ?, ?)',
+          [conversationId, chatbotId, 'anonymous-user-1', 3, 'ended']
+        );
+        
+        // Add sample messages
+        await connection.execute(
+          'INSERT INTO messages (id, conversation_id, content, is_bot) VALUES (?, ?, ?, ?)',
+          [uuidv4(), conversationId, 'Hi there! How can I help you today?', true]
+        );
+        
+        await connection.execute(
+          'INSERT INTO messages (id, conversation_id, content, is_bot) VALUES (?, ?, ?, ?)',
+          [uuidv4(), conversationId, 'What services do you offer?', false]
+        );
+        
+        await connection.execute(
+          'INSERT INTO messages (id, conversation_id, content, is_bot) VALUES (?, ?, ?, ?)',
+          [uuidv4(), conversationId, 'We offer a range of services including web design, development, and digital marketing solutions. Is there a specific service you\'re interested in?', true]
+        );
+        
+        // Create sample lead
+        await connection.execute(
+          'INSERT INTO leads (id, chatbot_id, conversation_id, name, email, status) VALUES (?, ?, ?, ?, ?, ?)',
+          [uuidv4(), chatbotId, conversationId, 'John Doe', 'john.doe@example.com', 'new']
+        );
+        
+        // Create sample analytics
+        const today = new Date().toISOString().split('T')[0];
+        await connection.execute(
+          'INSERT INTO analytics (id, chatbot_id, date, conversations, messages, leads, avg_response_time) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [uuidv4(), chatbotId, today, 1, 3, 1, 2.5]
+        );
+        
+        console.log('Sample conversation, messages, lead, and analytics data created');
       }
     }
 

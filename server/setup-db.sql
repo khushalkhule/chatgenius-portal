@@ -70,6 +70,96 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
   FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
 );
 
+-- Conversations table (New)
+CREATE TABLE IF NOT EXISTS conversations (
+  id VARCHAR(36) PRIMARY KEY,
+  chatbot_id VARCHAR(36) NOT NULL,
+  user_identifier VARCHAR(255),
+  start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  end_time TIMESTAMP NULL,
+  message_count INT DEFAULT 0,
+  status ENUM('active', 'ended', 'abandoned') DEFAULT 'active',
+  metadata JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+);
+
+-- Messages table (New)
+CREATE TABLE IF NOT EXISTS messages (
+  id VARCHAR(36) PRIMARY KEY,
+  conversation_id VARCHAR(36) NOT NULL,
+  content TEXT NOT NULL,
+  is_bot BOOLEAN NOT NULL,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+);
+
+-- Leads table (New)
+CREATE TABLE IF NOT EXISTS leads (
+  id VARCHAR(36) PRIMARY KEY,
+  chatbot_id VARCHAR(36) NOT NULL,
+  conversation_id VARCHAR(36),
+  name VARCHAR(255),
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  company VARCHAR(255),
+  status ENUM('new', 'contacted', 'qualified', 'converted', 'disqualified') DEFAULT 'new',
+  metadata JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL
+);
+
+-- Analytics table (New)
+CREATE TABLE IF NOT EXISTS analytics (
+  id VARCHAR(36) PRIMARY KEY,
+  chatbot_id VARCHAR(36) NOT NULL,
+  date DATE NOT NULL,
+  conversations INT DEFAULT 0,
+  messages INT DEFAULT 0,
+  leads INT DEFAULT 0,
+  avg_response_time FLOAT,
+  avg_conversation_length FLOAT,
+  success_rate FLOAT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_chatbot_day (chatbot_id, date)
+);
+
+-- Invoices table (New)
+CREATE TABLE IF NOT EXISTS invoices (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  subscription_id VARCHAR(36) NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(3) DEFAULT 'USD',
+  status ENUM('pending', 'paid', 'failed', 'refunded') DEFAULT 'pending',
+  billing_date DATE NOT NULL,
+  payment_date DATE,
+  payment_method VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (subscription_id) REFERENCES user_subscriptions(id) ON DELETE CASCADE
+);
+
+-- Integrations table (New)
+CREATE TABLE IF NOT EXISTS integrations (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  type ENUM('hubspot', 'zapier', 'instagram', 'slack', 'other') NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  configuration JSON,
+  status ENUM('active', 'inactive', 'failed') DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Insert default subscription plans if they don't exist
 INSERT INTO subscription_plans (id, name, price, price_value, period, chatbots, api_calls, storage, description, features, highlighted, badge)
 SELECT '1', 'Free', '$0', 0, 'month', 1, 100, 1, 'Basic plan for individuals', JSON_ARRAY('1 chatbot', '100 API calls/month', '1GB storage'), FALSE, ''
