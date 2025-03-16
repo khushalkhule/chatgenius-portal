@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -194,7 +195,7 @@ const ChatInterface = ({
           
           setMessages([botMessage]);
         } else {
-          toast.error(response.error || "Failed to submit lead information");
+          toast.error(response.message || "Failed to submit lead information");
         }
       } catch (error) {
         console.error("Error submitting lead:", error);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,7 @@ export const ClientSubscriptionDetails = () => {
         if (response.success) {
           setSubscription(response.data);
         } else {
-          toast.error(response.error || "Failed to fetch subscription details");
+          toast.error(response.message || "Failed to fetch subscription details");
         }
       } catch (error) {
         console.error("Error fetching subscription:", error);
