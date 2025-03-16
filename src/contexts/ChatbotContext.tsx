@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import api from "../services/api";
 import { toast } from "sonner";
@@ -42,7 +43,11 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
 
     try {
-      const response = await api.chatbots.getAllChatbots();
+      // Get the user ID from localStorage
+      const userId = localStorage.getItem('userId');
+      
+      // Pass the userId to the getAllChatbots method
+      const response = await api.chatbots.getAllChatbots(userId);
       if (response.success) {
         setChatbots(response.data);
       } else {

@@ -53,12 +53,15 @@ export const chatbotService = {
       const { chatbots } = await apiRequest(`/chatbots/${userId}`, {
         method: 'GET'
       });
-      return chatbots;
+      return { success: true, data: chatbots };
     } catch (error) {
       console.error('Error getting chatbots:', error);
       // Fallback to localStorage if API fails
       const storedChatbots = localStorage.getItem('chatbots');
-      return storedChatbots ? JSON.parse(storedChatbots) : [];
+      return { 
+        success: true, 
+        data: storedChatbots ? JSON.parse(storedChatbots) : [] 
+      };
     }
   },
   
@@ -280,30 +283,30 @@ export const userService = {
     localStorage.removeItem('user');
     localStorage.removeItem('userId');
     return { success: true };
-  }
-};
-
-// Add a method to userService to get dashboard stats
-userService.getDashboardStats = async () => {
-  try {
-    const { stats } = await apiRequest('/admin/dashboard-stats', {
-      method: 'GET'
-    });
-    return { success: true, data: stats };
-  } catch (error) {
-    console.error('Error getting dashboard stats:', error);
-    
-    // Return mock stats as fallback
-    const mockStats = {
-      totalUsers: 156,
-      activeChatbots: 42,
-      apiRequests: 12567,
-      userGrowth: 12,
-      chatbotGrowth: 18,
-      apiGrowth: 24
-    };
-    
-    return { success: true, data: mockStats };
+  },
+  
+  // Add getDashboardStats method to userService
+  getDashboardStats: async () => {
+    try {
+      const { stats } = await apiRequest('/admin/dashboard-stats', {
+        method: 'GET'
+      });
+      return { success: true, data: stats };
+    } catch (error) {
+      console.error('Error getting dashboard stats:', error);
+      
+      // Return mock stats as fallback
+      const mockStats = {
+        totalUsers: 156,
+        activeChatbots: 42,
+        apiRequests: 12567,
+        userGrowth: 12,
+        chatbotGrowth: 18,
+        apiGrowth: 24
+      };
+      
+      return { success: true, data: mockStats };
+    }
   }
 };
 
@@ -520,69 +523,95 @@ export const subscriptionService = {
       
       return { success: true };
     }
+  },
+  
+  // Add getSubscription method to subscription service
+  getSubscription: async () => {
+    try {
+      const userId = localStorage.getItem('userId');
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+      
+      const subscription = await subscriptionService.getUserSubscription(userId);
+      
+      // Transform the subscription data for the client component
+      const transformedSubscription = {
+        plan: subscription.planInfo.name,
+        status: subscription.status,
+        price: subscription.planInfo.price_value,
+        billingCycle: subscription.planInfo.period,
+        nextBillingDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString(),
+        features: subscription.planInfo.features,
+        usage: {
+          chatbots: {
+            used: 2,
+            limit: subscription.planInfo.chatbots
+          },
+          conversations: {
+            used: 45,
+            limit: subscription.planInfo.api_calls
+          },
+          apiCalls: {
+            used: 385,
+            limit: subscription.planInfo.api_calls
+          },
+          storage: {
+            used: 128,
+            limit: subscription.planInfo.storage
+          }
+        },
+        billingHistory: [
+          {
+            id: 'INV-001',
+            date: new Date().toLocaleDateString(),
+            amount: subscription.planInfo.price_value,
+            status: 'paid'
+          },
+          {
+            id: 'INV-002',
+            date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString(),
+            amount: subscription.planInfo.price_value,
+            status: 'paid'
+          }
+        ]
+      };
+      
+      return { success: true, data: transformedSubscription };
+    } catch (error) {
+      console.error('Error getting subscription:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to fetch subscription' 
+      };
+    }
   }
 };
 
-// Add a method to get subscription for the current user
-subscriptionService.getSubscription = async () => {
-  try {
-    const userId = localStorage.getItem('userId');
-    
-    if (!userId) {
-      throw new Error('User not authenticated');
+// Create a new admin service
+export const adminService = {
+  getDashboardStats: async () => {
+    try {
+      const { stats } = await apiRequest('/admin/dashboard-stats', {
+        method: 'GET'
+      });
+      return { success: true, data: stats };
+    } catch (error) {
+      console.error('Error getting dashboard stats:', error);
+      
+      // Return mock stats as fallback
+      const mockStats = {
+        totalUsers: 156,
+        activeChatbots: 42,
+        apiRequests: 12567,
+        userGrowth: 12,
+        chatbotGrowth: 18,
+        apiGrowth: 24
+      };
+      
+      return { success: true, data: mockStats };
     }
-    
-    const subscription = await subscriptionService.getUserSubscription(userId);
-    
-    // Transform the subscription data for the client component
-    const transformedSubscription = {
-      plan: subscription.planInfo.name,
-      status: subscription.status,
-      price: subscription.planInfo.price_value,
-      billingCycle: subscription.planInfo.period,
-      nextBillingDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString(),
-      features: subscription.planInfo.features,
-      usage: {
-        chatbots: {
-          used: 2,
-          limit: subscription.planInfo.chatbots
-        },
-        conversations: {
-          used: 45,
-          limit: subscription.planInfo.api_calls
-        },
-        apiCalls: {
-          used: 385,
-          limit: subscription.planInfo.api_calls
-        },
-        storage: {
-          used: 128,
-          limit: subscription.planInfo.storage
-        }
-      },
-      billingHistory: [
-        {
-          id: 'INV-001',
-          date: new Date().toLocaleDateString(),
-          amount: subscription.planInfo.price_value,
-          status: 'paid'
-        },
-        {
-          id: 'INV-002',
-          date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString(),
-          amount: subscription.planInfo.price_value,
-          status: 'paid'
-        }
-      ]
-    };
-    
-    return { success: true, data: transformedSubscription };
-  } catch (error) {
-    console.error('Error getting subscription:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to fetch subscription' 
-    };
   }
 };
 
@@ -701,7 +730,8 @@ initializeDatabase().catch(console.error);
 export const api = {
   chatbots: chatbotService,
   users: userService,
-  subscriptions: subscriptionService
+  subscriptions: subscriptionService,
+  admin: adminService
 };
 
 export default api;

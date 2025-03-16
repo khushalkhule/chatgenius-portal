@@ -83,7 +83,8 @@ const DashboardOverview = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const response = await api.users.getDashboardStats();
+        // Note: using the new method we added to the API service
+        const response = await api.admin.getDashboardStats();
         if (response.success) {
           setStats(response.data);
         } else {
