@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,8 @@ import { toast } from "sonner";
 import { knowledgeBaseService } from "@/services/knowledgeBaseService";
 import { useChatbots } from "@/contexts/ChatbotContext";
 
-interface KnowledgeBaseUrl {
+// Define interfaces locally for use in the component
+interface KnowledgeBaseUrlLocal {
   id?: string;
   knowledgeBaseId?: string;
   url: string;
@@ -25,7 +27,7 @@ interface KnowledgeBaseUrl {
   updatedAt?: string;
 }
 
-interface KnowledgeBaseFaq {
+interface KnowledgeBaseFaqLocal {
   id?: string;
   knowledgeBaseId?: string;
   question: string;
@@ -123,9 +125,10 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
         let newKnowledgeBase;
         
         if (data.sourceType === "website") {
-          const urlObject: KnowledgeBaseUrl = {
+          // Create a URL object compatible with the expected structure
+          const urlData = {
             url: data.url,
-            status: 'pending'
+            status: 'pending' as const
           };
           
           newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
@@ -133,7 +136,7 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
             name: `Website KB - ${new URL(data.url).hostname}`,
             type: "website",
             status: "active",
-            urls: [urlObject]
+            urls: [urlData]
           });
         } else if (data.sourceType === "file") {
           newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
