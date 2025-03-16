@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import db from './database';
 import { RowDataPacket } from 'mysql2';
@@ -37,13 +36,11 @@ interface KnowledgeBaseFaq {
   updatedAt: string;
 }
 
-// Helper function to check if result is an array
 const isArray = (result: any): result is any[] => {
   return Array.isArray(result);
 };
 
 export const knowledgeBaseService = {
-  // Get all knowledge bases for a chatbot
   getKnowledgeBasesByChatbotId: async (chatbotId: string): Promise<KnowledgeBase[]> => {
     try {
       const sql = 'SELECT * FROM knowledge_bases WHERE chatbot_id = ?';
@@ -67,7 +64,6 @@ export const knowledgeBaseService = {
         faqs: [] as KnowledgeBaseFaq[]
       }));
       
-      // For each knowledge base, fetch related URLs and FAQs
       for (const kb of knowledgeBases) {
         kb.urls = await knowledgeBaseService.getUrlsByKnowledgeBaseId(kb.id);
         kb.faqs = await knowledgeBaseService.getFaqsByKnowledgeBaseId(kb.id);
@@ -80,7 +76,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Get a single knowledge base by ID
   getKnowledgeBaseById: async (id: string): Promise<KnowledgeBase | null> => {
     try {
       const sql = 'SELECT * FROM knowledge_bases WHERE id = ?';
@@ -112,7 +107,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Create a new knowledge base
   createKnowledgeBase: async (knowledgeBase: Omit<KnowledgeBase, 'id' | 'createdAt' | 'updatedAt'>): Promise<KnowledgeBase | null> => {
     try {
       const id = uuidv4();
@@ -131,14 +125,12 @@ export const knowledgeBaseService = {
         knowledgeBase.filePath || null
       ]);
       
-      // If it's a website type, add URLs
       if (knowledgeBase.type === 'website' && knowledgeBase.urls && knowledgeBase.urls.length > 0) {
         for (const url of knowledgeBase.urls) {
           await knowledgeBaseService.addUrl(id, url.url);
         }
       }
       
-      // If it's a FAQ type, add FAQ pairs
       if (knowledgeBase.type === 'faq' && knowledgeBase.faqs && knowledgeBase.faqs.length > 0) {
         for (const faq of knowledgeBase.faqs) {
           await knowledgeBaseService.addFaq(id, faq.question, faq.answer);
@@ -152,7 +144,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Update a knowledge base
   updateKnowledgeBase: async (id: string, updates: Partial<KnowledgeBase>): Promise<KnowledgeBase | null> => {
     try {
       let sql = 'UPDATE knowledge_bases SET ';
@@ -183,23 +174,17 @@ export const knowledgeBaseService = {
       
       await db.query(sql, params);
       
-      // Update URLs if provided
       if (updates.urls) {
-        // Delete existing URLs
         await db.query('DELETE FROM knowledge_base_urls WHERE knowledge_base_id = ?', [id]);
         
-        // Add new URLs
         for (const url of updates.urls) {
           await knowledgeBaseService.addUrl(id, url.url);
         }
       }
       
-      // Update FAQs if provided
       if (updates.faqs) {
-        // Delete existing FAQs
         await db.query('DELETE FROM knowledge_base_faqs WHERE knowledge_base_id = ?', [id]);
         
-        // Add new FAQs
         for (const faq of updates.faqs) {
           await knowledgeBaseService.addFaq(id, faq.question, faq.answer);
         }
@@ -212,16 +197,10 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Delete a knowledge base
   deleteKnowledgeBase: async (id: string): Promise<boolean> => {
     try {
-      // Delete URLs associated with this knowledge base
       await db.query('DELETE FROM knowledge_base_urls WHERE knowledge_base_id = ?', [id]);
-      
-      // Delete FAQs associated with this knowledge base
       await db.query('DELETE FROM knowledge_base_faqs WHERE knowledge_base_id = ?', [id]);
-      
-      // Delete the knowledge base
       await db.query('DELETE FROM knowledge_bases WHERE id = ?', [id]);
       
       return true;
@@ -231,7 +210,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Get all URLs for a knowledge base
   getUrlsByKnowledgeBaseId: async (knowledgeBaseId: string): Promise<KnowledgeBaseUrl[]> => {
     try {
       const sql = 'SELECT * FROM knowledge_base_urls WHERE knowledge_base_id = ?';
@@ -257,7 +235,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Add a URL to a knowledge base
   addUrl: async (knowledgeBaseId: string, url: string): Promise<KnowledgeBaseUrl | null> => {
     try {
       const id = uuidv4();
@@ -294,11 +271,10 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Update URL status
   updateUrlStatus: async (id: string, status: 'pending' | 'crawled' | 'error', errorMessage?: string): Promise<boolean> => {
     try {
       let sql = 'UPDATE knowledge_base_urls SET status = ?';
-      const params = [status];
+      const params: any[] = [status];
       
       if (status === 'crawled') {
         sql += ', last_crawled = NOW()';
@@ -320,7 +296,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Get all FAQs for a knowledge base
   getFaqsByKnowledgeBaseId: async (knowledgeBaseId: string): Promise<KnowledgeBaseFaq[]> => {
     try {
       const sql = 'SELECT * FROM knowledge_base_faqs WHERE knowledge_base_id = ?';
@@ -344,7 +319,6 @@ export const knowledgeBaseService = {
     }
   },
   
-  // Add a FAQ to a knowledge base
   addFaq: async (knowledgeBaseId: string, question: string, answer: string): Promise<KnowledgeBaseFaq | null> => {
     try {
       const id = uuidv4();
