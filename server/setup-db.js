@@ -168,6 +168,53 @@ async function setupDatabase() {
 
         console.log('Sample chatbot created for demo user');
         
+        // Create knowledge base entries for the sample chatbot
+        const kbId = uuidv4();
+        await connection.execute(
+          'INSERT INTO knowledge_bases (id, chatbot_id, name, type, content) VALUES (?, ?, ?, ?, ?)',
+          [
+            kbId,
+            chatbotId,
+            'General Knowledge',
+            'text',
+            'This is sample knowledge base content for the demo chatbot. It contains general information about our products and services.'
+          ]
+        );
+        
+        // Add some URLs to the knowledge base
+        await connection.execute(
+          'INSERT INTO knowledge_base_urls (id, knowledge_base_id, url, status) VALUES (?, ?, ?, ?)',
+          [uuidv4(), kbId, 'https://example.com', 'crawled']
+        );
+        
+        await connection.execute(
+          'INSERT INTO knowledge_base_urls (id, knowledge_base_id, url, status) VALUES (?, ?, ?, ?)',
+          [uuidv4(), kbId, 'https://example.com/about', 'crawled']
+        );
+        
+        // Add some FAQs to the knowledge base
+        await connection.execute(
+          'INSERT INTO knowledge_base_faqs (id, knowledge_base_id, question, answer) VALUES (?, ?, ?, ?)',
+          [
+            uuidv4(),
+            kbId,
+            'What services do you offer?',
+            'We offer a range of services including web design, development, and digital marketing solutions.'
+          ]
+        );
+        
+        await connection.execute(
+          'INSERT INTO knowledge_base_faqs (id, knowledge_base_id, question, answer) VALUES (?, ?, ?, ?)',
+          [
+            uuidv4(),
+            kbId,
+            'How can I contact support?',
+            'You can contact our support team via email at support@example.com or by phone at (555) 123-4567.'
+          ]
+        );
+        
+        console.log('Sample knowledge base created for demo chatbot');
+        
         // Create sample conversation data
         const conversationId = uuidv4();
         await connection.execute(
@@ -204,7 +251,26 @@ async function setupDatabase() {
           [uuidv4(), chatbotId, today, 1, 3, 1, 2.5]
         );
         
-        console.log('Sample conversation, messages, lead, and analytics data created');
+        // Create sample webhook
+        await connection.execute(
+          'INSERT INTO webhooks (id, user_id, chatbot_id, name, url, events) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            uuidv4(),
+            clientId,
+            chatbotId,
+            'New Message Notification',
+            'https://example.com/webhooks/messages',
+            JSON_stringify(['new_message', 'new_conversation'])
+          ]
+        );
+        
+        // Create sample API usage
+        await connection.execute(
+          'INSERT INTO api_usage (id, user_id, chatbot_id, endpoint, count, date) VALUES (?, ?, ?, ?, ?, ?)',
+          [uuidv4(), clientId, chatbotId, '/api/chat', 10, today]
+        );
+        
+        console.log('Sample conversation, messages, lead, analytics, webhook, and API usage data created');
       }
     }
 

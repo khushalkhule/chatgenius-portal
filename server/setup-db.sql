@@ -1,4 +1,5 @@
 
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(36) PRIMARY KEY,
@@ -70,7 +71,45 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
   FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
 );
 
--- Conversations table (New)
+-- Knowledge Base table (NEW)
+CREATE TABLE IF NOT EXISTS knowledge_bases (
+  id VARCHAR(36) PRIMARY KEY,
+  chatbot_id VARCHAR(36) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  type ENUM('website', 'file', 'text', 'faq') NOT NULL,
+  status ENUM('active', 'processing', 'error', 'inactive') DEFAULT 'active',
+  content TEXT,
+  file_path VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+);
+
+-- Knowledge Base URLs table (NEW)
+CREATE TABLE IF NOT EXISTS knowledge_base_urls (
+  id VARCHAR(36) PRIMARY KEY,
+  knowledge_base_id VARCHAR(36) NOT NULL,
+  url VARCHAR(255) NOT NULL,
+  status ENUM('pending', 'crawled', 'error') DEFAULT 'pending',
+  last_crawled TIMESTAMP NULL,
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id) ON DELETE CASCADE
+);
+
+-- Knowledge Base FAQs table (NEW)
+CREATE TABLE IF NOT EXISTS knowledge_base_faqs (
+  id VARCHAR(36) PRIMARY KEY,
+  knowledge_base_id VARCHAR(36) NOT NULL,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id) ON DELETE CASCADE
+);
+
+-- Conversations table
 CREATE TABLE IF NOT EXISTS conversations (
   id VARCHAR(36) PRIMARY KEY,
   chatbot_id VARCHAR(36) NOT NULL,
@@ -85,7 +124,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
 );
 
--- Messages table (New)
+-- Messages table
 CREATE TABLE IF NOT EXISTS messages (
   id VARCHAR(36) PRIMARY KEY,
   conversation_id VARCHAR(36) NOT NULL,
@@ -96,7 +135,7 @@ CREATE TABLE IF NOT EXISTS messages (
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
--- Leads table (New)
+-- Leads table
 CREATE TABLE IF NOT EXISTS leads (
   id VARCHAR(36) PRIMARY KEY,
   chatbot_id VARCHAR(36) NOT NULL,
@@ -113,7 +152,7 @@ CREATE TABLE IF NOT EXISTS leads (
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL
 );
 
--- Analytics table (New)
+-- Analytics table
 CREATE TABLE IF NOT EXISTS analytics (
   id VARCHAR(36) PRIMARY KEY,
   chatbot_id VARCHAR(36) NOT NULL,
@@ -130,7 +169,7 @@ CREATE TABLE IF NOT EXISTS analytics (
   UNIQUE KEY unique_chatbot_day (chatbot_id, date)
 );
 
--- Invoices table (New)
+-- Invoices table
 CREATE TABLE IF NOT EXISTS invoices (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
@@ -147,7 +186,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   FOREIGN KEY (subscription_id) REFERENCES user_subscriptions(id) ON DELETE CASCADE
 );
 
--- Integrations table (New)
+-- Integrations table
 CREATE TABLE IF NOT EXISTS integrations (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
@@ -158,6 +197,60 @@ CREATE TABLE IF NOT EXISTS integrations (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Files table (NEW)
+CREATE TABLE IF NOT EXISTS files (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  file_type VARCHAR(50) NOT NULL,
+  file_size INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Webhooks table (NEW)
+CREATE TABLE IF NOT EXISTS webhooks (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  chatbot_id VARCHAR(36) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  url VARCHAR(255) NOT NULL,
+  events JSON NOT NULL,
+  secret_key VARCHAR(255),
+  status ENUM('active', 'inactive') DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE
+);
+
+-- API Usage table (NEW)
+CREATE TABLE IF NOT EXISTS api_usage (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  chatbot_id VARCHAR(36) NOT NULL,
+  endpoint VARCHAR(255) NOT NULL,
+  count INT DEFAULT 1,
+  date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (chatbot_id) REFERENCES chatbots(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_usage (user_id, chatbot_id, endpoint, date)
+);
+
+-- Theme Templates table (NEW)
+CREATE TABLE IF NOT EXISTS theme_templates (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  config JSON NOT NULL,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Insert default subscription plans if they don't exist
@@ -172,3 +265,29 @@ WHERE NOT EXISTS (SELECT 1 FROM subscription_plans WHERE id = '2');
 INSERT INTO subscription_plans (id, name, price, price_value, period, price_monthly, price_monthly_value, chatbots, api_calls, storage, description, features, highlighted, badge)
 SELECT '3', 'Enterprise', '$99', 99, 'month', '$99', 99, 20, 5000, 50, 'For larger organizations', JSON_ARRAY('20 chatbots', '5,000 API calls/month', '50GB storage', 'Dedicated support', 'Custom integrations'), FALSE, 'Enterprise'
 WHERE NOT EXISTS (SELECT 1 FROM subscription_plans WHERE id = '3');
+
+-- Insert default theme templates
+INSERT INTO theme_templates (id, name, description, config, is_default)
+SELECT 'theme-1', 'Light Modern', 'A clean, modern theme with light colors', 
+JSON_OBJECT(
+  'primaryColor', '#3B82F6',
+  'textColor', '#1F2937',
+  'backgroundColor', '#FFFFFF',
+  'secondaryColor', '#F3F4F6',
+  'borderRadius', '8px',
+  'fontFamily', 'Inter, sans-serif'
+), TRUE
+WHERE NOT EXISTS (SELECT 1 FROM theme_templates WHERE id = 'theme-1');
+
+INSERT INTO theme_templates (id, name, description, config, is_default)
+SELECT 'theme-2', 'Dark Professional', 'A sleek, dark theme for professional use', 
+JSON_OBJECT(
+  'primaryColor', '#8B5CF6',
+  'textColor', '#F9FAFB',
+  'backgroundColor', '#111827',
+  'secondaryColor', '#1F2937',
+  'borderRadius', '4px',
+  'fontFamily', 'Roboto, sans-serif'
+), FALSE
+WHERE NOT EXISTS (SELECT 1 FROM theme_templates WHERE id = 'theme-2');
+
