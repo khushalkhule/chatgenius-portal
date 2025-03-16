@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import db from './database';
 import { RowDataPacket } from 'mysql2';
@@ -36,6 +37,7 @@ interface KnowledgeBaseFaq {
   updatedAt: string;
 }
 
+// Helper function to check if the result is an array
 const isArray = (result: any): result is any[] => {
   return Array.isArray(result);
 };
