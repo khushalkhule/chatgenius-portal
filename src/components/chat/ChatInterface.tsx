@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import ChatMessage from "./ChatMessage";
-import { leadsApi } from "@/services/api";
+import api from "@/services/api";
 import { toast } from "sonner";
 
 interface Message {
@@ -175,7 +175,7 @@ const ChatInterface = ({
     
     if (chatbotId) {
       try {
-        const response = await leadsApi.addLead({
+        const response = await api.chatbots.addLead({
           ...leadData,
           chatbotId,
           source: window.location.href

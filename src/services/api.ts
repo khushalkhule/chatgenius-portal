@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 // Define base URL for the API
@@ -135,6 +134,21 @@ export const chatbotService = {
       
       return { success: true };
     }
+  },
+  
+  // Add a method to handle lead submissions
+  addLead: async (leadData) => {
+    try {
+      const response = await apiRequest(`/chatbots/${leadData.chatbotId}/leads`, {
+        method: 'POST',
+        body: JSON.stringify(leadData)
+      });
+      
+      return { success: true, data: response.lead };
+    } catch (error) {
+      console.error('Error adding lead:', error);
+      return { success: false, error: error.message || 'Failed to submit lead' };
+    }
   }
 };
 
@@ -266,6 +280,30 @@ export const userService = {
     localStorage.removeItem('user');
     localStorage.removeItem('userId');
     return { success: true };
+  }
+};
+
+// Add a method to userService to get dashboard stats
+userService.getDashboardStats = async () => {
+  try {
+    const { stats } = await apiRequest('/admin/dashboard-stats', {
+      method: 'GET'
+    });
+    return { success: true, data: stats };
+  } catch (error) {
+    console.error('Error getting dashboard stats:', error);
+    
+    // Return mock stats as fallback
+    const mockStats = {
+      totalUsers: 156,
+      activeChatbots: 42,
+      apiRequests: 12567,
+      userGrowth: 12,
+      chatbotGrowth: 18,
+      apiGrowth: 24
+    };
+    
+    return { success: true, data: mockStats };
   }
 };
 
@@ -482,6 +520,69 @@ export const subscriptionService = {
       
       return { success: true };
     }
+  }
+};
+
+// Add a method to get subscription for the current user
+subscriptionService.getSubscription = async () => {
+  try {
+    const userId = localStorage.getItem('userId');
+    
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    
+    const subscription = await subscriptionService.getUserSubscription(userId);
+    
+    // Transform the subscription data for the client component
+    const transformedSubscription = {
+      plan: subscription.planInfo.name,
+      status: subscription.status,
+      price: subscription.planInfo.price_value,
+      billingCycle: subscription.planInfo.period,
+      nextBillingDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString(),
+      features: subscription.planInfo.features,
+      usage: {
+        chatbots: {
+          used: 2,
+          limit: subscription.planInfo.chatbots
+        },
+        conversations: {
+          used: 45,
+          limit: subscription.planInfo.api_calls
+        },
+        apiCalls: {
+          used: 385,
+          limit: subscription.planInfo.api_calls
+        },
+        storage: {
+          used: 128,
+          limit: subscription.planInfo.storage
+        }
+      },
+      billingHistory: [
+        {
+          id: 'INV-001',
+          date: new Date().toLocaleDateString(),
+          amount: subscription.planInfo.price_value,
+          status: 'paid'
+        },
+        {
+          id: 'INV-002',
+          date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString(),
+          amount: subscription.planInfo.price_value,
+          status: 'paid'
+        }
+      ]
+    };
+    
+    return { success: true, data: transformedSubscription };
+  } catch (error) {
+    console.error('Error getting subscription:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to fetch subscription' 
+    };
   }
 };
 

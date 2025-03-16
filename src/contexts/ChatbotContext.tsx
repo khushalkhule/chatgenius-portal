@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { chatbotApi } from "../services/api";
+import api from "../services/api";
 import { toast } from "sonner";
 
 // Define the chatbot type
@@ -43,7 +42,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
 
     try {
-      const response = await chatbotApi.getAllChatbots();
+      const response = await api.chatbots.getAllChatbots();
       if (response.success) {
         setChatbots(response.data);
       } else {
@@ -69,7 +68,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const addChatbot = async (newChatbot: Omit<Chatbot, "id" | "createdAt" | "conversations" | "leads" | "status">) => {
     try {
-      const response = await chatbotApi.createChatbot(newChatbot);
+      const response = await api.chatbots.createChatbot(newChatbot);
       
       if (response.success) {
         setChatbots(prev => [...prev, response.data]);
@@ -91,7 +90,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateChatbot = async (id: string, updates: Partial<Chatbot>) => {
     try {
-      const response = await chatbotApi.updateChatbot(id, updates);
+      const response = await api.chatbots.updateChatbot(id, updates);
       
       if (response.success) {
         setChatbots(prev => 
@@ -110,7 +109,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteChatbot = async (id: string) => {
     try {
-      const response = await chatbotApi.deleteChatbot(id);
+      const response = await api.chatbots.deleteChatbot(id);
       
       if (response.success) {
         setChatbots(prev => prev.filter(chatbot => chatbot.id !== id));

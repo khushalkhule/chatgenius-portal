@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -10,7 +9,7 @@ import { UsageStats } from "@/components/admin/UsageStats";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { SubscriptionDetails } from "@/components/admin/SubscriptionDetails";
 import { SalesAnalytics } from "@/components/admin/SalesAnalytics";
-import { adminApi } from "@/services/api";
+import api from "@/services/api";
 import { toast } from "sonner";
 
 const AdminDashboard = () => {
@@ -84,7 +83,7 @@ const DashboardOverview = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const response = await adminApi.getDashboardStats();
+        const response = await api.users.getDashboardStats();
         if (response.success) {
           setStats(response.data);
         } else {

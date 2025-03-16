@@ -15,7 +15,7 @@ import {
   AlertCircle,
   Loader2 
 } from "lucide-react";
-import { subscriptionApi } from "@/services/api";
+import api from "@/services/api";
 import { toast } from "sonner";
 
 export const ClientSubscriptionDetails = () => {
@@ -27,7 +27,7 @@ export const ClientSubscriptionDetails = () => {
     const fetchSubscription = async () => {
       setIsLoading(true);
       try {
-        const response = await subscriptionApi.getSubscription();
+        const response = await api.subscriptions.getSubscription();
         if (response.success) {
           setSubscription(response.data);
         } else {
