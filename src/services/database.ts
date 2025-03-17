@@ -19,6 +19,22 @@ const db = {
     }
   },
   
+  // Add query method directly on the db object to match usage in knowledgeBaseService
+  query: async (sql: string, params: any[] = []): Promise<any[]> => {
+    try {
+      console.log(`Querying: ${sql}`, params);
+      
+      // Use the mock database to execute the query
+      const results = await mockDb.query(sql, params);
+      
+      // Return just the results array
+      return results;
+    } catch (error) {
+      console.error('Database query error:', error);
+      throw error;
+    }
+  },
+  
   // Add other MySQL pool methods as needed
   getConnection: async () => {
     return {
