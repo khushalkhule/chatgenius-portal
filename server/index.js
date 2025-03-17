@@ -835,4 +835,45 @@ app.get('/api/subscription-plans/:id', async (req, res) => {
     const [plans] = await pool.execute('SELECT * FROM subscription_plans WHERE id = ?', [id]);
     
     if (plans.length === 0) {
-      return res.status(404).json({ success:
+      return res.status(404).json({ success: false, message: 'Subscription plan not found' });
+    }
+    
+    // Format the plan
+    const plan = {
+      ...plans[0],
+      price_value: Number(plans[0].price_value),
+      price_monthly_value: plans[0].price_monthly_value ? Number(plans[0].price_monthly_value) : undefined,
+      chatbots: Number(plans[0].chatbots),
+      api_calls: Number(plans[0].api_calls),
+      storage: Number(plans[0].storage),
+      features: plans[0].features ? JSON.parse(plans[0].features) : []
+    };
+    
+    res.json({ success: true, plan });
+  } catch (error) {
+    console.error('Get subscription plan error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get subscription plan', error: error.message });
+  }
+});
+
+// Generic 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'API endpoint not found' });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Internal server error', 
+    error: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message 
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`API available at http://localhost:${PORT}/api`);
+});
+

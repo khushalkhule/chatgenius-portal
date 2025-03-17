@@ -1,191 +1,294 @@
 
 // Mock database service that uses localStorage instead of MySQL
+import { v4 as uuidv4 } from 'uuid';
+
+// Define the collections we'll use in localStorage
+const collections = [
+  'mockChatbots',
+  'mockKnowledgeBases',
+  'mockKnowledgeBaseUrls',
+  'mockKnowledgeBaseFaqs',
+  'mockUsers',
+  'mockAuthTokens',
+  'mockSubscriptionPlans'
+];
+
+// Initialize localStorage collections if they don't exist
+const initializeCollections = () => {
+  collections.forEach(collection => {
+    if (!localStorage.getItem(collection)) {
+      localStorage.setItem(collection, JSON.stringify([]));
+    }
+  });
+};
+
+// Call this when the module is loaded
+initializeCollections();
+
+// Helper function to get a collection from localStorage
+const getCollection = (name: string): any[] => {
+  const data = localStorage.getItem(name);
+  return data ? JSON.parse(data) : [];
+};
+
+// Helper function to save a collection to localStorage
+const saveCollection = (name: string, data: any[]): void => {
+  localStorage.setItem(name, JSON.stringify(data));
+};
+
+// Parse SQL query to extract table name (simple version)
+const extractTableName = (sql: string): string | null => {
+  const tableMatch = sql.match(/FROM\s+(\w+)/i);
+  if (tableMatch && tableMatch[1]) {
+    return tableMatch[1];
+  }
+  
+  const insertMatch = sql.match(/INTO\s+(\w+)/i);
+  if (insertMatch && insertMatch[1]) {
+    return insertMatch[1];
+  }
+  
+  const updateMatch = sql.match(/UPDATE\s+(\w+)/i);
+  if (updateMatch && updateMatch[1]) {
+    return updateMatch[1];
+  }
+  
+  const deleteMatch = sql.match(/DELETE\s+FROM\s+(\w+)/i);
+  if (deleteMatch && deleteMatch[1]) {
+    return deleteMatch[1];
+  }
+  
+  return null;
+};
+
+// Convert MySQL table name to localStorage collection name
+const tableToCollection = (tableName: string): string => {
+  switch (tableName) {
+    case 'chatbots': return 'mockChatbots';
+    case 'knowledge_bases': return 'mockKnowledgeBases';
+    case 'knowledge_base_urls': return 'mockKnowledgeBaseUrls';
+    case 'knowledge_base_faqs': return 'mockKnowledgeBaseFaqs';
+    case 'users': return 'mockUsers';
+    case 'auth_tokens': return 'mockAuthTokens';
+    case 'subscription_plans': return 'mockSubscriptionPlans';
+    default: return `mock${tableName.charAt(0).toUpperCase() + tableName.slice(1)}`;
+  }
+};
+
 const mockDb = {
   query: async (sql: string, params: any[] = []): Promise<any[]> => {
     console.log('Mock DB Query:', sql, params);
     
-    // Simple routing based on the query
-    if (sql.includes('SELECT') && sql.includes('FROM knowledge_bases')) {
-      return mockQueries.getKnowledgeBases(params);
-    } else if (sql.includes('SELECT') && sql.includes('FROM knowledge_base_urls')) {
-      return mockQueries.getKnowledgeBaseUrls(params);
-    } else if (sql.includes('SELECT') && sql.includes('FROM knowledge_base_faqs')) {
-      return mockQueries.getKnowledgeBaseFaqs(params);
-    } else if (sql.includes('INSERT INTO knowledge_bases')) {
-      return mockQueries.insertKnowledgeBase(params);
-    } else if (sql.includes('INSERT INTO knowledge_base_urls')) {
-      return mockQueries.insertKnowledgeBaseUrl(params);
-    } else if (sql.includes('INSERT INTO knowledge_base_faqs')) {
-      return mockQueries.insertKnowledgeBaseFaq(params);
-    } else if (sql.includes('DELETE FROM knowledge_base_urls')) {
-      return mockQueries.deleteKnowledgeBaseUrls(params);
-    } else if (sql.includes('DELETE FROM knowledge_base_faqs')) {
-      return mockQueries.deleteKnowledgeBaseFaqs(params);
-    } else if (sql.includes('DELETE FROM knowledge_bases')) {
-      return mockQueries.deleteKnowledgeBase(params);
-    } else if (sql.includes('UPDATE knowledge_bases')) {
-      return mockQueries.updateKnowledgeBase(params);
+    // Simple query routing based on operation type and table
+    if (sql.toUpperCase().startsWith('SELECT')) {
+      return mockQueries.handleSelect(sql, params);
+    } else if (sql.toUpperCase().startsWith('INSERT')) {
+      return mockQueries.handleInsert(sql, params);
+    } else if (sql.toUpperCase().startsWith('UPDATE')) {
+      return mockQueries.handleUpdate(sql, params);
+    } else if (sql.toUpperCase().startsWith('DELETE')) {
+      return mockQueries.handleDelete(sql, params);
     }
     
+    console.warn('Unhandled query:', sql);
     return [];
   }
 };
 
 const mockQueries = {
-  getKnowledgeBases: (params: any[]): any[] => {
-    const chatbotId = params[0];
-    const storedKbs = localStorage.getItem('mockKnowledgeBases');
-    if (!storedKbs) return [];
+  handleSelect: (sql: string, params: any[]): any[] => {
+    const tableName = extractTableName(sql);
+    if (!tableName) {
+      console.warn('Could not extract table name from SELECT query:', sql);
+      return [];
+    }
     
-    const kbs = JSON.parse(storedKbs);
-    return kbs.filter((kb: any) => kb.chatbot_id === chatbotId);
-  },
-  
-  getKnowledgeBaseUrls: (params: any[]): any[] => {
-    const kbId = params[0];
-    const storedUrls = localStorage.getItem('mockKnowledgeBaseUrls');
-    if (!storedUrls) return [];
+    const collectionName = tableToCollection(tableName);
+    const collection = getCollection(collectionName);
     
-    const urls = JSON.parse(storedUrls);
-    return urls.filter((url: any) => url.knowledge_base_id === kbId);
-  },
-  
-  getKnowledgeBaseFaqs: (params: any[]): any[] => {
-    const kbId = params[0];
-    const storedFaqs = localStorage.getItem('mockKnowledgeBaseFaqs');
-    if (!storedFaqs) return [];
-    
-    const faqs = JSON.parse(storedFaqs);
-    return faqs.filter((faq: any) => faq.knowledge_base_id === kbId);
-  },
-  
-  insertKnowledgeBase: (params: any[]): any[] => {
-    const [id, chatbotId, name, type, status, content, filePath] = params;
-    
-    const newKb = {
-      id,
-      chatbot_id: chatbotId,
-      name,
-      type,
-      status,
-      content,
-      file_path: filePath,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    const storedKbs = localStorage.getItem('mockKnowledgeBases');
-    const kbs = storedKbs ? JSON.parse(storedKbs) : [];
-    kbs.push(newKb);
-    localStorage.setItem('mockKnowledgeBases', JSON.stringify(kbs));
-    
-    return [];
-  },
-  
-  insertKnowledgeBaseUrl: (params: any[]): any[] => {
-    const [id, kbId, url, status] = params;
-    
-    const newUrl = {
-      id,
-      knowledge_base_id: kbId,
-      url,
-      status,
-      last_crawled: null,
-      error_message: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    const storedUrls = localStorage.getItem('mockKnowledgeBaseUrls');
-    const urls = storedUrls ? JSON.parse(storedUrls) : [];
-    urls.push(newUrl);
-    localStorage.setItem('mockKnowledgeBaseUrls', JSON.stringify(urls));
-    
-    return [];
-  },
-  
-  insertKnowledgeBaseFaq: (params: any[]): any[] => {
-    const [id, kbId, question, answer] = params;
-    
-    const newFaq = {
-      id,
-      knowledge_base_id: kbId,
-      question,
-      answer,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    const storedFaqs = localStorage.getItem('mockKnowledgeBaseFaqs');
-    const faqs = storedFaqs ? JSON.parse(storedFaqs) : [];
-    faqs.push(newFaq);
-    localStorage.setItem('mockKnowledgeBaseFaqs', JSON.stringify(faqs));
-    
-    return [];
-  },
-  
-  deleteKnowledgeBaseUrls: (params: any[]): any[] => {
-    const kbId = params[0];
-    
-    const storedUrls = localStorage.getItem('mockKnowledgeBaseUrls');
-    if (!storedUrls) return [];
-    
-    const urls = JSON.parse(storedUrls);
-    const filteredUrls = urls.filter((url: any) => url.knowledge_base_id !== kbId);
-    localStorage.setItem('mockKnowledgeBaseUrls', JSON.stringify(filteredUrls));
-    
-    return [];
-  },
-  
-  deleteKnowledgeBaseFaqs: (params: any[]): any[] => {
-    const kbId = params[0];
-    
-    const storedFaqs = localStorage.getItem('mockKnowledgeBaseFaqs');
-    if (!storedFaqs) return [];
-    
-    const faqs = JSON.parse(storedFaqs);
-    const filteredFaqs = faqs.filter((faq: any) => faq.knowledge_base_id !== kbId);
-    localStorage.setItem('mockKnowledgeBaseFaqs', JSON.stringify(filteredFaqs));
-    
-    return [];
-  },
-  
-  deleteKnowledgeBase: (params: any[]): any[] => {
-    const kbId = params[0];
-    
-    const storedKbs = localStorage.getItem('mockKnowledgeBases');
-    if (!storedKbs) return [];
-    
-    const kbs = JSON.parse(storedKbs);
-    const filteredKbs = kbs.filter((kb: any) => kb.id !== kbId);
-    localStorage.setItem('mockKnowledgeBases', JSON.stringify(filteredKbs));
-    
-    return [];
-  },
-  
-  updateKnowledgeBase: (params: any[]): any[] => {
-    // Last param is always the ID
-    const id = params[params.length - 1];
-    
-    const storedKbs = localStorage.getItem('mockKnowledgeBases');
-    if (!storedKbs) return [];
-    
-    const kbs = JSON.parse(storedKbs);
-    const updatedKbs = kbs.map((kb: any) => {
-      if (kb.id === id) {
-        // Update fields based on the SQL query structure
-        // This is a simplified approach
-        return {
-          ...kb,
-          updated_at: new Date().toISOString()
-        };
+    // Check for WHERE clause to filter results
+    const whereMatch = sql.match(/WHERE\s+(.*?)(\s+ORDER BY|\s+LIMIT|\s+GROUP BY|$)/i);
+    if (whereMatch && whereMatch[1]) {
+      // Very simple WHERE parsing - assumes format "column = ?"
+      const whereClause = whereMatch[1].trim();
+      
+      // Handle different WHERE formats
+      if (whereClause.includes('=')) {
+        const columnMatch = whereClause.match(/(\w+)\s*=\s*\?/);
+        if (columnMatch && columnMatch[1]) {
+          const column = columnMatch[1];
+          const value = params[0];
+          
+          // Return filtered results
+          return collection.filter(item => {
+            // Check for snake_case to camelCase conversion
+            const itemValue = item[column] || item[column.replace(/_([a-z])/g, (g) => g[1].toUpperCase())];
+            return itemValue === value;
+          });
+        }
       }
-      return kb;
+    }
+    
+    // If no WHERE clause or can't parse it, return all items
+    return collection;
+  },
+  
+  handleInsert: (sql: string, params: any[]): any[] => {
+    const tableName = extractTableName(sql);
+    if (!tableName) {
+      console.warn('Could not extract table name from INSERT query:', sql);
+      return [];
+    }
+    
+    const collectionName = tableToCollection(tableName);
+    const collection = getCollection(collectionName);
+    
+    // Extract column names from INSERT INTO statement
+    const columnsMatch = sql.match(/\(([^)]+)\)/);
+    if (!columnsMatch || !columnsMatch[1]) {
+      console.warn('Could not extract columns from INSERT query:', sql);
+      return [];
+    }
+    
+    // Parse column names
+    const columns = columnsMatch[1].split(',').map(col => col.trim());
+    
+    // Create a new object with the provided values
+    const newItem: any = {};
+    columns.forEach((column, index) => {
+      // If ID is not provided, generate a UUID
+      if (column === 'id' && (!params[index] || params[index] === '')) {
+        newItem[column] = uuidv4();
+      } else {
+        newItem[column] = params[index];
+      }
     });
     
-    localStorage.setItem('mockKnowledgeBases', JSON.stringify(updatedKbs));
+    // Add timestamps if they're in the columns but not in the params
+    if (columns.includes('created_at') && !newItem['created_at']) {
+      newItem['created_at'] = new Date().toISOString();
+    }
+    if (columns.includes('updated_at') && !newItem['updated_at']) {
+      newItem['updated_at'] = new Date().toISOString();
+    }
     
-    return [];
+    // Add the new item to the collection
+    collection.push(newItem);
+    saveCollection(collectionName, collection);
+    
+    return [{ insertId: newItem.id || newItem.ID || uuidv4() }];
+  },
+  
+  handleUpdate: (sql: string, params: any[]): any[] => {
+    const tableName = extractTableName(sql);
+    if (!tableName) {
+      console.warn('Could not extract table name from UPDATE query:', sql);
+      return [];
+    }
+    
+    const collectionName = tableToCollection(tableName);
+    const collection = getCollection(collectionName);
+    
+    // Extract SET clause
+    const setMatch = sql.match(/SET\s+(.*?)(\s+WHERE|$)/i);
+    if (!setMatch || !setMatch[1]) {
+      console.warn('Could not extract SET clause from UPDATE query:', sql);
+      return [];
+    }
+    
+    // Parse SET clause - this assumes format "column1 = ?, column2 = ?, ..."
+    const setParts = setMatch[1].split(',').map(part => part.trim());
+    const setColumns = setParts.map(part => {
+      const matches = part.match(/(\w+)\s*=\s*\?/);
+      return matches && matches[1] ? matches[1] : null;
+    }).filter(Boolean) as string[];
+    
+    // Extract WHERE clause for filtering
+    const whereMatch = sql.match(/WHERE\s+(.*?)$/i);
+    if (!whereMatch || !whereMatch[1]) {
+      console.warn('Could not extract WHERE clause from UPDATE query:', sql);
+      return [];
+    }
+    
+    // Simple WHERE parsing - assumes "id = ?" format
+    const whereClause = whereMatch[1].trim();
+    const columnMatch = whereClause.match(/(\w+)\s*=\s*\?/);
+    if (!columnMatch || !columnMatch[1]) {
+      console.warn('Could not parse WHERE clause from UPDATE query:', sql);
+      return [];
+    }
+    
+    const whereColumn = columnMatch[1];
+    const whereValue = params[params.length - 1]; // Last param is usually the WHERE value
+    
+    // Update the collection
+    const updatedCollection = collection.map(item => {
+      if (item[whereColumn] === whereValue) {
+        // Apply updates
+        const updatedItem = { ...item };
+        setColumns.forEach((column, index) => {
+          updatedItem[column] = params[index];
+        });
+        
+        // Update timestamp if it exists
+        if ('updated_at' in item) {
+          updatedItem.updated_at = new Date().toISOString();
+        }
+        
+        return updatedItem;
+      }
+      return item;
+    });
+    
+    saveCollection(collectionName, updatedCollection);
+    
+    // Return affected rows count (MySQL-like)
+    const affectedRows = updatedCollection.filter(item => item[whereColumn] === whereValue).length;
+    return [{ affectedRows }];
+  },
+  
+  handleDelete: (sql: string, params: any[]): any[] => {
+    const tableName = extractTableName(sql);
+    if (!tableName) {
+      console.warn('Could not extract table name from DELETE query:', sql);
+      return [];
+    }
+    
+    const collectionName = tableToCollection(tableName);
+    let collection = getCollection(collectionName);
+    
+    // Extract WHERE clause for filtering
+    const whereMatch = sql.match(/WHERE\s+(.*?)$/i);
+    if (!whereMatch || !whereMatch[1]) {
+      console.warn('No WHERE clause in DELETE query:', sql);
+      // Return without deleting anything (safety measure)
+      return [];
+    }
+    
+    // Simple WHERE parsing - assumes "column = ?" format
+    const whereClause = whereMatch[1].trim();
+    const columnMatch = whereClause.match(/(\w+)\s*=\s*\?/);
+    if (!columnMatch || !columnMatch[1]) {
+      console.warn('Could not parse WHERE clause from DELETE query:', sql);
+      return [];
+    }
+    
+    const whereColumn = columnMatch[1];
+    const whereValue = params[0];
+    
+    // Count items to be deleted
+    const beforeCount = collection.length;
+    
+    // Filter out the items to delete
+    const filteredCollection = collection.filter(item => item[whereColumn] !== whereValue);
+    
+    // Calculate affected rows
+    const affectedRows = beforeCount - filteredCollection.length;
+    
+    // Save the updated collection
+    saveCollection(collectionName, filteredCollection);
+    
+    return [{ affectedRows }];
   }
 };
 
