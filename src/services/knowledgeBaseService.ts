@@ -15,6 +15,9 @@ interface KnowledgeBase {
   updatedAt: string;
   urls?: KnowledgeBaseUrl[];
   faqs?: KnowledgeBaseFaq[];
+  // New optional properties for input data
+  urlInputs?: KnowledgeBaseUrlInput[];
+  faqInputs?: KnowledgeBaseFaqInput[];
 }
 
 interface KnowledgeBaseUrl {
@@ -35,6 +38,16 @@ interface KnowledgeBaseFaq {
   answer: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Simple input interfaces for creating new items
+interface KnowledgeBaseUrlInput {
+  url: string;
+}
+
+interface KnowledgeBaseFaqInput {
+  question: string;
+  answer: string;
 }
 
 // Helper function to check if the result is an array
@@ -127,16 +140,15 @@ export const knowledgeBaseService = {
         knowledgeBase.filePath || null
       ]);
       
-      if (knowledgeBase.type === 'website' && knowledgeBase.urls && knowledgeBase.urls.length > 0) {
-        for (const urlData of knowledgeBase.urls) {
-          // Only extract the url property and let the addUrl method handle the rest
-          await knowledgeBaseService.addUrl(id, urlData.url);
+      if (knowledgeBase.type === 'website' && knowledgeBase.urlInputs && knowledgeBase.urlInputs.length > 0) {
+        for (const urlInput of knowledgeBase.urlInputs) {
+          await knowledgeBaseService.addUrl(id, urlInput.url);
         }
       }
       
-      if (knowledgeBase.type === 'faq' && knowledgeBase.faqs && knowledgeBase.faqs.length > 0) {
-        for (const faq of knowledgeBase.faqs) {
-          await knowledgeBaseService.addFaq(id, faq.question, faq.answer);
+      if (knowledgeBase.type === 'faq' && knowledgeBase.faqInputs && knowledgeBase.faqInputs.length > 0) {
+        for (const faqInput of knowledgeBase.faqInputs) {
+          await knowledgeBaseService.addFaq(id, faqInput.question, faqInput.answer);
         }
       }
       

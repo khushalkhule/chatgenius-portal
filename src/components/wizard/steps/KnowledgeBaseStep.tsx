@@ -14,24 +14,13 @@ import { toast } from "sonner";
 import { knowledgeBaseService } from "@/services/knowledgeBaseService";
 import { useChatbots } from "@/contexts/ChatbotContext";
 
-interface KnowledgeBaseUrlLocal {
-  id?: string;
-  knowledgeBaseId?: string;
+interface KnowledgeBaseUrlInput {
   url: string;
-  status?: 'pending' | 'crawled' | 'error';
-  lastCrawled?: string;
-  errorMessage?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
-interface KnowledgeBaseFaqLocal {
-  id?: string;
-  knowledgeBaseId?: string;
+interface KnowledgeBaseFaqInput {
   question: string;
   answer: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 const websiteSchema = z.object({
@@ -123,14 +112,14 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
         let newKnowledgeBase;
         
         if (data.sourceType === "website") {
+          const urlInputs: KnowledgeBaseUrlInput[] = [{ url: data.url }];
+          
           newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
             chatbotId,
             name: `Website KB - ${new URL(data.url).hostname}`,
             type: "website",
             status: "active",
-            urls: [{
-              url: data.url,
-            }]
+            urlInputs
           });
         } else if (data.sourceType === "file") {
           newKnowledgeBase = await knowledgeBaseService.createKnowledgeBase({
@@ -149,11 +138,11 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
             content: data.content
           });
         } else if (data.sourceType === "faq") {
-          let faqsData = [];
+          let faqInputs: KnowledgeBaseFaqInput[] = [];
           try {
             const parsedFaqs = JSON.parse(data.faqs);
             
-            faqsData = parsedFaqs.map((faq: any) => ({
+            faqInputs = parsedFaqs.map((faq: any) => ({
               question: faq.question,
               answer: faq.answer
             }));
@@ -167,7 +156,7 @@ const KnowledgeBaseStep = ({ onNext, onBack, initialData, chatbotId }: Knowledge
             name: `FAQ KB - ${new Date().toLocaleDateString()}`,
             type: "faq",
             status: "active",
-            faqs: faqsData
+            faqInputs
           });
         }
         
