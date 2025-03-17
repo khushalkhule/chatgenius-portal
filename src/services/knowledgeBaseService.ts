@@ -128,8 +128,9 @@ export const knowledgeBaseService = {
       ]);
       
       if (knowledgeBase.type === 'website' && knowledgeBase.urls && knowledgeBase.urls.length > 0) {
-        for (const url of knowledgeBase.urls) {
-          await knowledgeBaseService.addUrl(id, url.url);
+        for (const urlData of knowledgeBase.urls) {
+          // Only extract the url property and let the addUrl method handle the rest
+          await knowledgeBaseService.addUrl(id, urlData.url);
         }
       }
       
