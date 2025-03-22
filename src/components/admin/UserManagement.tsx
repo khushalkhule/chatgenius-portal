@@ -77,10 +77,12 @@ export const UserManagement = () => {
         [newUser.name, newUser.email, newUser.plan, "active", new Date().toISOString()]
       );
       
-      const newUserId = result.insertId || Date.now().toString();
+      const insertId = Array.isArray(result) && result.length > 0 && result[0].insertId 
+        ? result[0].insertId 
+        : Date.now().toString();
       
       const newUserObj = {
-        id: newUserId.toString(),
+        id: insertId.toString(),
         name: newUser.name,
         email: newUser.email,
         plan: newUser.plan,
