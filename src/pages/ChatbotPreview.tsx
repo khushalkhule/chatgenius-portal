@@ -5,12 +5,26 @@ import { useChatbots } from "@/contexts/ChatbotContext";
 import ChatInterface from "@/components/chat/ChatInterface";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 const ChatbotPreview = () => {
   const { id } = useParams<{ id: string }>();
   const { getChatbot } = useChatbots();
+  const [apiKey, setApiKey] = useState<string | null>(null);
   
   const chatbot = getChatbot(id || "");
+  
+  // Load the API key from localStorage
+  useEffect(() => {
+    // Try to get admin API key from localStorage
+    const storedKey = localStorage.getItem("adminOpenAIKey");
+    
+    // If no key in localStorage, use the default one
+    const defaultKey = "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";
+    
+    setApiKey(storedKey || defaultKey);
+  }, []);
   
   if (!chatbot) {
     return (
@@ -45,14 +59,12 @@ const ChatbotPreview = () => {
   const showLeadForm = chatbot.leadForm?.enabled === true;
   
   // Configure the OpenAI API with the correct model and settings
-  const apiKey = "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";
-  
-  const aiModelConfig = {
+  const aiModelConfig = apiKey ? {
     model: chatbot.aiModel?.model || "gpt-4o-mini",
     temperature: chatbot.aiModel?.temperature || 0.7,
     apiKey: apiKey,
     systemPrompt: chatbot.aiModel?.systemPrompt || `You are an AI assistant representing ${chatbot.name}. Be helpful, concise, and friendly.`
-  };
+  } : undefined;
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -72,16 +84,22 @@ const ChatbotPreview = () => {
       
       <main className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <ChatInterface 
-            botName={chatbot.name}
-            placeholder={chatbot.design?.placeholder || "Type your message..."}
-            initialMessages={initialMessages}
-            suggestedMessages={suggestedMessages}
-            showLeadForm={showLeadForm}
-            aiModelConfig={aiModelConfig}
-            preserveFormatting={true}
-            chatbotId={chatbot.id}
-          />
+          {!apiKey ? (
+            <div className="text-center p-4 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-amber-800 mb-2">Loading API key...</p>
+            </div>
+          ) : (
+            <ChatInterface 
+              botName={chatbot.name}
+              placeholder={chatbot.design?.placeholder || "Type your message..."}
+              initialMessages={initialMessages}
+              suggestedMessages={suggestedMessages}
+              showLeadForm={showLeadForm}
+              aiModelConfig={aiModelConfig}
+              preserveFormatting={true}
+              chatbotId={chatbot.id}
+            />
+          )}
         </div>
       </main>
       

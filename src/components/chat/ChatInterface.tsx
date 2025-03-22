@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -97,6 +98,13 @@ const ChatInterface = ({
 
     if (aiModelConfig?.apiKey) {
       try {
+        console.log("Calling OpenAI API with config:", {
+          model: aiModelConfig.model,
+          temperature: aiModelConfig.temperature,
+          systemPrompt: aiModelConfig.systemPrompt?.substring(0, 20) + "...",
+          apiKeyPresent: !!aiModelConfig.apiKey
+        });
+        
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -157,6 +165,8 @@ const ChatInterface = ({
         setIsTyping(false);
       }
     } else {
+      console.warn("No API key provided for AI model, using simulated response");
+      
       setTimeout(() => {
         const botMessage: Message = {
           id: generateId(),
