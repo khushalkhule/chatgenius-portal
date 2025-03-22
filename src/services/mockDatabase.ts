@@ -1,3 +1,4 @@
+
 // Mock database service that uses localStorage instead of MySQL
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,6 +12,17 @@ const collections = [
   'mockAuthTokens',
   'mockSubscriptionPlans'
 ];
+
+// Helper function to get a collection from localStorage
+const getCollection = (name: string): any[] => {
+  const data = localStorage.getItem(name);
+  return data ? JSON.parse(data) : [];
+};
+
+// Helper function to save a collection to localStorage
+const saveCollection = (name: string, data: any[]): void => {
+  localStorage.setItem(name, JSON.stringify(data));
+};
 
 // Initialize localStorage collections if they don't exist
 const initializeCollections = () => {
@@ -87,17 +99,6 @@ const initializeCollections = () => {
 // Call this when the module is loaded
 initializeCollections();
 
-// Helper function to get a collection from localStorage
-const getCollection = (name: string): any[] => {
-  const data = localStorage.getItem(name);
-  return data ? JSON.parse(data) : [];
-};
-
-// Helper function to save a collection to localStorage
-const saveCollection = (name: string, data: any[]): void => {
-  localStorage.setItem(name, JSON.stringify(data));
-};
-
 // Parse SQL query to extract table name (simple version)
 const extractTableName = (sql: string): string | null => {
   const tableMatch = sql.match(/FROM\s+(\w+)/i);
@@ -134,26 +135,6 @@ const tableToCollection = (tableName: string): string => {
     case 'auth_tokens': return 'mockAuthTokens';
     case 'subscription_plans': return 'mockSubscriptionPlans';
     default: return `mock${tableName.charAt(0).toUpperCase() + tableName.slice(1)}`;
-  }
-};
-
-const mockDb = {
-  query: async (sql: string, params: any[] = []): Promise<any[]> => {
-    console.log('Mock DB Query:', sql, params);
-    
-    // Simple query routing based on operation type and table
-    if (sql.toUpperCase().startsWith('SELECT')) {
-      return mockQueries.handleSelect(sql, params);
-    } else if (sql.toUpperCase().startsWith('INSERT')) {
-      return mockQueries.handleInsert(sql, params);
-    } else if (sql.toUpperCase().startsWith('UPDATE')) {
-      return mockQueries.handleUpdate(sql, params);
-    } else if (sql.toUpperCase().startsWith('DELETE')) {
-      return mockQueries.handleDelete(sql, params);
-    }
-    
-    console.warn('Unhandled query:', sql);
-    return [];
   }
 };
 
@@ -351,6 +332,26 @@ const mockQueries = {
     saveCollection(collectionName, filteredCollection);
     
     return [{ affectedRows }];
+  }
+};
+
+const mockDb = {
+  query: async (sql: string, params: any[] = []): Promise<any[]> => {
+    console.log('Mock DB Query:', sql, params);
+    
+    // Simple query routing based on operation type and table
+    if (sql.toUpperCase().startsWith('SELECT')) {
+      return mockQueries.handleSelect(sql, params);
+    } else if (sql.toUpperCase().startsWith('INSERT')) {
+      return mockQueries.handleInsert(sql, params);
+    } else if (sql.toUpperCase().startsWith('UPDATE')) {
+      return mockQueries.handleUpdate(sql, params);
+    } else if (sql.toUpperCase().startsWith('DELETE')) {
+      return mockQueries.handleDelete(sql, params);
+    }
+    
+    console.warn('Unhandled query:', sql);
+    return [];
   }
 };
 
