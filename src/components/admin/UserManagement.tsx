@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,63 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Search, MoreHorizontal, Plus, Lock, Mail, UserCheck, UserX } from "lucide-react";
-
-// Mock user data
-const mockUsers = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    plan: "Pro",
-    status: "active",
-    lastActive: "2023-06-20T14:30:00.000Z",
-    chatbots: 5,
-    avatarUrl: "",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    plan: "Basic",
-    status: "active",
-    lastActive: "2023-06-19T10:15:00.000Z",
-    chatbots: 2,
-    avatarUrl: "",
-  },
-  {
-    id: "3",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    plan: "Enterprise",
-    status: "inactive",
-    lastActive: "2023-05-25T09:45:00.000Z",
-    chatbots: 12,
-    avatarUrl: "",
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    plan: "Pro",
-    status: "active",
-    lastActive: "2023-06-18T16:20:00.000Z",
-    chatbots: 4,
-    avatarUrl: "",
-  },
-  {
-    id: "5",
-    name: "Michael Wilson",
-    email: "michael.wilson@example.com",
-    plan: "Basic",
-    status: "suspended",
-    lastActive: "2023-06-10T11:05:00.000Z",
-    chatbots: 1,
-    avatarUrl: "",
-  },
-];
+import db from "@/services/database";
 
 export const UserManagement = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -81,6 +27,132 @@ export const UserManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsDataLoading(true);
+      try {
+        const results = await db.query(
+          "SELECT * FROM users ORDER BY created_at DESC",
+          []
+        );
+        
+        const formattedUsers = results.map(user => ({
+          id: user.id.toString(),
+          name: user.name || user.username || "Unknown",
+          email: user.email,
+          plan: user.subscription_plan || "Basic",
+          status: user.status || "active",
+          lastActive: user.last_login_at || user.created_at,
+          chatbots: user.chatbot_count || 0,
+          avatarUrl: user.avatar_url || "",
+        }));
+        
+        setUsers(formattedUsers);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast.error("Failed to load users");
+        setUsers(mockUsers);
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  const handleCreateUser = async () => {
+    setIsLoading(true);
+    
+    if (!newUser.name || !newUser.email) {
+      toast.error("Please fill all required fields");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const result = await db.query(
+        "INSERT INTO users (name, email, subscription_plan, status, created_at) VALUES (?, ?, ?, ?, ?)",
+        [newUser.name, newUser.email, newUser.plan, "active", new Date().toISOString()]
+      );
+      
+      const newUserId = result.insertId || Date.now().toString();
+      
+      const newUserObj = {
+        id: newUserId.toString(),
+        name: newUser.name,
+        email: newUser.email,
+        plan: newUser.plan,
+        status: "active",
+        lastActive: new Date().toISOString(),
+        chatbots: 0,
+        avatarUrl: "",
+      };
+
+      setUsers([newUserObj, ...users]);
+      setNewUser({ name: "", email: "", plan: "Basic" });
+      setIsCreateUserOpen(false);
+      toast.success("User created successfully");
+    } catch (error) {
+      console.error("Error creating user:", error);
+      toast.error("Failed to create user");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = (userId, email) => {
+    toast.success(`Password reset email sent to ${email}`);
+  };
+
+  const handleSendEmail = (userId, email) => {
+    toast.success(`Email sent to ${email}`);
+  };
+
+  const handleToggleUserStatus = async (userId, currentStatus) => {
+    const newStatus = currentStatus === "active" ? "suspended" : "active";
+    
+    try {
+      await db.query(
+        "UPDATE users SET status = ? WHERE id = ?",
+        [newStatus, userId]
+      );
+      
+      setUsers(
+        users.map((user) =>
+          user.id === userId ? { ...user, status: newStatus } : user
+        )
+      );
+
+      toast.success(
+        `User ${newStatus === "active" ? "activated" : "suspended"} successfully`
+      );
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      toast.error("Failed to update user status");
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    try {
+      await db.query(
+        "DELETE FROM users WHERE id = ?",
+        [userId]
+      );
+      
+      setUsers(users.filter((user) => user.id !== userId));
+      toast.success("User deleted successfully");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
+    }
+  };
+
+  const handleViewUserDetails = (user) => {
+    setSelectedUser(user);
+    setIsUserDetailsOpen(true);
+  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -93,68 +165,6 @@ export const UserManagement = () => {
 
     return matchesSearch && matchesPlan && matchesStatus;
   });
-
-  const handleCreateUser = () => {
-    setIsLoading(true);
-    
-    if (!newUser.name || !newUser.email) {
-      toast.error("Please fill all required fields");
-      setIsLoading(false);
-      return;
-    }
-
-    // Simulate API call delay
-    setTimeout(() => {
-      const newUserObj = {
-        id: (users.length + 1).toString(),
-        name: newUser.name,
-        email: newUser.email,
-        plan: newUser.plan,
-        status: "active",
-        lastActive: new Date().toISOString(),
-        chatbots: 0,
-        avatarUrl: "",
-      };
-
-      setUsers([...users, newUserObj]);
-      setNewUser({ name: "", email: "", plan: "Basic" });
-      setIsCreateUserOpen(false);
-      setIsLoading(false);
-      toast.success("User created successfully");
-    }, 1000);
-  };
-
-  const handleResetPassword = (userId, email) => {
-    toast.success(`Password reset email sent to ${email}`);
-  };
-
-  const handleSendEmail = (userId, email) => {
-    toast.success(`Email sent to ${email}`);
-  };
-
-  const handleToggleUserStatus = (userId, currentStatus) => {
-    const newStatus = currentStatus === "active" ? "suspended" : "active";
-    
-    setUsers(
-      users.map((user) =>
-        user.id === userId ? { ...user, status: newStatus } : user
-      )
-    );
-
-    toast.success(
-      `User ${newStatus === "active" ? "activated" : "suspended"} successfully`
-    );
-  };
-
-  const handleDeleteUser = (userId) => {
-    setUsers(users.filter((user) => user.id !== userId));
-    toast.success("User deleted successfully");
-  };
-
-  const handleViewUserDetails = (user) => {
-    setSelectedUser(user);
-    setIsUserDetailsOpen(true);
-  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -309,7 +319,17 @@ export const UserManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length === 0 ? (
+              {isDataLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <div className="flex justify-center items-center space-x-2">
+                      <div className="h-4 w-4 bg-primary/60 rounded-full animate-bounce" />
+                      <div className="h-4 w-4 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                      <div className="h-4 w-4 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -420,7 +440,6 @@ export const UserManagement = () => {
         </div>
       </CardContent>
 
-      {/* User Details Dialog */}
       <Dialog open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -526,4 +545,79 @@ export const UserManagement = () => {
       </Dialog>
     </Card>
   );
+};
+
+const mockUsers = [
+  {
+    id: "1",
+    name: "John Doe",
+    email: "john.doe@example.com",
+    plan: "Pro",
+    status: "active",
+    lastActive: "2023-06-20T14:30:00.000Z",
+    chatbots: 5,
+    avatarUrl: "",
+  },
+  {
+    id: "2",
+    name: "Jane Smith",
+    email: "jane.smith@example.com",
+    plan: "Basic",
+    status: "active",
+    lastActive: "2023-06-19T10:15:00.000Z",
+    chatbots: 2,
+    avatarUrl: "",
+  },
+  {
+    id: "3",
+    name: "Robert Johnson",
+    email: "robert.johnson@example.com",
+    plan: "Enterprise",
+    status: "inactive",
+    lastActive: "2023-05-25T09:45:00.000Z",
+    chatbots: 12,
+    avatarUrl: "",
+  },
+  {
+    id: "4",
+    name: "Emily Davis",
+    email: "emily.davis@example.com",
+    plan: "Pro",
+    status: "active",
+    lastActive: "2023-06-18T16:20:00.000Z",
+    chatbots: 4,
+    avatarUrl: "",
+  },
+  {
+    id: "5",
+    name: "Michael Wilson",
+    email: "michael.wilson@example.com",
+    plan: "Basic",
+    status: "suspended",
+    lastActive: "2023-06-10T11:05:00.000Z",
+    chatbots: 1,
+    avatarUrl: "",
+  },
+];
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+};
+
+const getStatusBadgeColor = (status) => {
+  switch (status) {
+    case "active":
+      return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    case "inactive":
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+    case "suspended":
+      return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+    default:
+      return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+  }
 };

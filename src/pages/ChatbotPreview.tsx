@@ -35,7 +35,6 @@ const ChatbotPreview = () => {
   }
   
   // Extract suggested messages from chatbot design
-  // Split by newlines first, then filter out empty strings
   const suggestedMessages = chatbot.design?.suggestedMessages 
     ? chatbot.design.suggestedMessages.split('\n')
         .map(msg => msg.trim())
@@ -45,20 +44,15 @@ const ChatbotPreview = () => {
   // Determine if lead form should be shown
   const showLeadForm = chatbot.leadForm?.enabled === true;
   
-  // Prepare AI model configuration if API key exists
+  // Configure the OpenAI API with the correct model and settings
   const apiKey = "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";
   
-  const aiModelConfig = chatbot.aiModel?.model
-    ? {
-        model: chatbot.aiModel.model || "gpt-4o-mini",
-        temperature: chatbot.aiModel.temperature || 0.7,
-        apiKey: apiKey // Use the provided API key
-      }
-    : {
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-        apiKey: apiKey // Default configuration with API key
-      };
+  const aiModelConfig = {
+    model: chatbot.aiModel?.model || "gpt-4o-mini",
+    temperature: chatbot.aiModel?.temperature || 0.7,
+    apiKey: apiKey,
+    systemPrompt: chatbot.aiModel?.systemPrompt || `You are an AI assistant representing ${chatbot.name}. Be helpful, concise, and friendly.`
+  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -85,7 +79,8 @@ const ChatbotPreview = () => {
             suggestedMessages={suggestedMessages}
             showLeadForm={showLeadForm}
             aiModelConfig={aiModelConfig}
-            preserveFormatting={true} // New prop to ensure formatting is preserved
+            preserveFormatting={true}
+            chatbotId={chatbot.id}
           />
         </div>
       </main>

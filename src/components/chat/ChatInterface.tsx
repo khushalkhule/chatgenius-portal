@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +29,7 @@ interface ChatInterfaceProps {
     model: string;
     temperature: number;
     apiKey: string;
+    systemPrompt?: string;
   };
   preserveFormatting?: boolean;
   chatbotId?: string;
@@ -106,7 +106,10 @@ const ChatInterface = ({
           body: JSON.stringify({
             model: aiModelConfig.model || "gpt-4o-mini",
             messages: [
-              { role: "system", content: `You are an AI assistant named ${botName}. Be helpful, concise, and friendly.` },
+              { 
+                role: "system", 
+                content: aiModelConfig.systemPrompt || `You are an AI assistant named ${botName}. Be helpful, concise, and friendly.` 
+              },
               ...messages.map(msg => ({
                 role: msg.isBot ? "assistant" : "user",
                 content: msg.content
@@ -117,6 +120,12 @@ const ChatInterface = ({
             max_tokens: 1000
           })
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("OpenAI API error:", errorData);
+          throw new Error(`API error: ${errorData.error?.message || 'Unknown error'}`);
+        }
 
         const data = await response.json();
         
@@ -143,21 +152,23 @@ const ChatInterface = ({
         };
 
         setMessages((prevMessages) => [...prevMessages, botMessage]);
+        toast.error("Failed to get response from AI service");
+      } finally {
+        setIsTyping(false);
       }
     } else {
       setTimeout(() => {
         const botMessage: Message = {
           id: generateId(),
-          content: "This is a simulated response. In a real implementation, this would be a response from your AI model or backend API.",
+          content: "This is a simulated response. No API key was provided for the AI model.",
           isBot: true,
           timestamp: new Date(),
         };
 
         setMessages((prevMessages) => [...prevMessages, botMessage]);
+        setIsTyping(false);
       }, 1500);
     }
-    
-    setIsTyping(false);
   };
 
   const handleSuggestedMessageClick = (message: string) => {
@@ -365,7 +376,7 @@ const ChatInterface = ({
           />
           <Button
             type="submit"
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isTyping}
             size="icon"
             className="h-10 w-10 rounded-full"
           >

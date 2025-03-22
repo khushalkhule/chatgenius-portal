@@ -1,4 +1,3 @@
-
 // Mock database service that uses localStorage instead of MySQL
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,6 +19,69 @@ const initializeCollections = () => {
       localStorage.setItem(collection, JSON.stringify([]));
     }
   });
+  
+  // Add some initial data for users if none exists
+  const users = getCollection('mockUsers');
+  if (users.length === 0) {
+    const initialUsers = [
+      {
+        id: '1',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        subscription_plan: 'Pro',
+        status: 'active',
+        last_login_at: '2023-06-20T14:30:00.000Z',
+        created_at: '2023-01-15T09:30:00.000Z',
+        chatbot_count: 5,
+        avatar_url: '',
+      },
+      {
+        id: '2',
+        name: 'Jane Smith',
+        email: 'jane.smith@example.com',
+        subscription_plan: 'Basic',
+        status: 'active',
+        last_login_at: '2023-06-19T10:15:00.000Z',
+        created_at: '2023-02-05T11:45:00.000Z',
+        chatbot_count: 2,
+        avatar_url: '',
+      },
+      {
+        id: '3',
+        name: 'Robert Johnson',
+        email: 'robert.johnson@example.com',
+        subscription_plan: 'Enterprise',
+        status: 'inactive',
+        last_login_at: '2023-05-25T09:45:00.000Z',
+        created_at: '2023-01-30T14:20:00.000Z',
+        chatbot_count: 12,
+        avatar_url: '',
+      },
+      {
+        id: '4',
+        name: 'Emily Davis',
+        email: 'emily.davis@example.com',
+        subscription_plan: 'Pro',
+        status: 'active',
+        last_login_at: '2023-06-18T16:20:00.000Z',
+        created_at: '2023-03-10T08:15:00.000Z',
+        chatbot_count: 4,
+        avatar_url: '',
+      },
+      {
+        id: '5',
+        name: 'Michael Wilson',
+        email: 'michael.wilson@example.com',
+        subscription_plan: 'Basic',
+        status: 'suspended',
+        last_login_at: '2023-06-10T11:05:00.000Z',
+        created_at: '2023-02-20T13:30:00.000Z',
+        chatbot_count: 1,
+        avatar_url: '',
+      },
+    ];
+    saveCollection('mockUsers', initialUsers);
+  }
 };
 
 // Call this when the module is loaded
