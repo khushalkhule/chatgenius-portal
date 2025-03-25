@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 // Define base URL for the API
@@ -94,15 +93,27 @@ export const chatbotService = {
         method: 'POST',
         body: JSON.stringify(chatbot)
       });
-      return newChatbot;
+      return { success: true, data: newChatbot };
     } catch (error) {
       console.error('Error creating chatbot:', error);
       // Fallback to localStorage
       const storedChatbots = localStorage.getItem('chatbots');
       const chatbots = storedChatbots ? JSON.parse(storedChatbots) : [];
-      chatbots.push(chatbot);
+      
+      // Generate a unique ID for the new chatbot
+      const newChatbot = {
+        ...chatbot,
+        id: `chatbot-${Date.now()}`,
+        status: 'active',
+        conversations: 0,
+        leads: 0,
+        createdAt: new Date().toISOString()
+      };
+      
+      chatbots.push(newChatbot);
       localStorage.setItem('chatbots', JSON.stringify(chatbots));
-      return chatbot;
+      
+      return { success: true, data: newChatbot };
     }
   },
   
@@ -147,7 +158,6 @@ export const chatbotService = {
     }
   },
   
-  // Add a method to handle lead submissions
   addLead: async (leadData) => {
     try {
       const response = await apiRequest(`/chatbots/${leadData.chatbotId}/leads`, {
@@ -296,7 +306,6 @@ export const userService = {
     return { success: true };
   },
   
-  // Add getDashboardStats method to userService
   getDashboardStats: async () => {
     try {
       const { stats } = await apiRequest('/admin/dashboard-stats', {
@@ -536,7 +545,6 @@ export const subscriptionService = {
     }
   },
   
-  // Add getSubscription method to subscription service
   getSubscription: async () => {
     try {
       const userId = localStorage.getItem('userId');
@@ -603,7 +611,6 @@ export const subscriptionService = {
   }
 };
 
-// Create a new admin service
 export const adminService = {
   getDashboardStats: async () => {
     try {
@@ -633,7 +640,6 @@ export const adminService = {
   }
 };
 
-// Initialize mock database for fallback
 export const initializeDatabase = async () => {
   try {
     console.log('Initializing mock database');
@@ -741,15 +747,5 @@ export const initializeDatabase = async () => {
   }
 };
 
-// Call initializeDatabase immediately to set up mock data
-initializeDatabase().catch(console.error);
+initialize
 
-// API Services
-export const api = {
-  chatbots: chatbotService,
-  users: userService,
-  subscriptions: subscriptionService,
-  admin: adminService
-};
-
-export default api;

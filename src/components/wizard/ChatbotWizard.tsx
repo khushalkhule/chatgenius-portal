@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import StepIndicator from "./StepIndicator";
 import BasicInfoStep from "./steps/BasicInfoStep";
@@ -66,7 +65,8 @@ const ChatbotWizard = () => {
     setIsCreating(true);
     
     try {
-      await addChatbot({
+      // Create a more complete chatbot object before submission
+      const chatbotData = {
         name: basicInfo?.name || "Unnamed Chatbot",
         description: basicInfo?.description || "",
         // Include all form data
@@ -75,13 +75,15 @@ const ChatbotWizard = () => {
         aiModel: formData.aiModel,
         design,
         leadForm: formData.leadForm,
-      });
+      };
+      
+      await addChatbot(chatbotData);
       
       toast.success("Chatbot created successfully!");
       
       // After successful creation, redirect to dashboard
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/dashboard/chatbots");
       }, 1500);
     } catch (error) {
       console.error("Error creating chatbot:", error);
