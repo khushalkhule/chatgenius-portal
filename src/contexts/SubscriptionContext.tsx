@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { subscriptionService } from "@/services/api";
+import api from "@/services/api";
 import { toast } from "sonner";
 
 // Define the subscription plan type
@@ -52,7 +53,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const fetchPlans = async () => {
       setLoading(true);
       try {
-        const result = await subscriptionService.getAllPlans();
+        const result = await api.subscriptions.getAllPlans();
         
         // Transform database result to match our SubscriptionPlan interface
         const formattedPlans = result.map((plan: any) => ({
@@ -78,7 +79,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Try to get current user's subscription
         const userId = localStorage.getItem("userId");
         if (userId) {
-          const subscription = await subscriptionService.getUserSubscription(userId);
+          const subscription = await api.subscriptions.getUserSubscription(userId);
           if (subscription) {
             // Transform to match UserSubscription interface
             const formattedSubscription: UserSubscription = {
@@ -136,7 +137,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const getUserSubscription = async (userId: string): Promise<UserSubscription | null> => {
     try {
-      const subscription = await subscriptionService.getUserSubscription(userId);
+      const subscription = await api.subscriptions.getUserSubscription(userId);
       if (subscription) {
         // Transform to match UserSubscription interface
         const formattedSubscription: UserSubscription = {
@@ -178,7 +179,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   const updateUserSubscription = async (userId: string, planId: string) => {
     try {
-      const updatedSubscription = await subscriptionService.updateUserSubscription(userId, planId);
+      const updatedSubscription = await api.subscriptions.updateUserSubscription(userId, planId);
       if (updatedSubscription) {
         // Transform to match UserSubscription interface
         const formattedSubscription: UserSubscription = {

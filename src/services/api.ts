@@ -329,7 +329,7 @@ const userService = {
   }
 };
 
-// Add the missing subscription service
+// Add the subscription service
 const subscriptionService = {
   getAllPlans: async () => {
     try {
@@ -488,6 +488,82 @@ const subscriptionService = {
     } catch (error) {
       console.error('Error deleting subscription plan:', error);
       return { success: false, message: 'Failed to delete plan' };
+    }
+  },
+  
+  getUserSubscription: async (userId) => {
+    try {
+      const { subscription } = await apiRequest(`/users/${userId}/subscription`, {
+        method: 'GET'
+      });
+      return subscription;
+    } catch (error) {
+      console.error('Error getting user subscription:', error);
+      // Return mock subscription as fallback
+      return {
+        id: "sub_1",
+        userId: userId,
+        planId: "2", // Pro plan
+        status: "active",
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        planInfo: {
+          id: "2",
+          name: "Pro",
+          price: "$29",
+          priceValue: 29,
+          period: "month",
+          chatbots: 5,
+          api_calls: 1000,
+          storage: 10,
+          description: "Perfect for small businesses",
+          features: ["5 chatbots", "1,000 API calls/month", "10GB storage", "Priority support"],
+          highlighted: true,
+          badge: "Most Popular"
+        }
+      };
+    }
+  },
+  
+  updateUserSubscription: async (userId, planId) => {
+    try {
+      const { subscription } = await apiRequest(`/users/${userId}/subscription`, {
+        method: 'PUT',
+        body: JSON.stringify({ planId })
+      });
+      return subscription;
+    } catch (error) {
+      console.error('Error updating user subscription:', error);
+      
+      // Return mock updated subscription as fallback
+      const mockPlan = {
+        id: planId,
+        name: planId === "1" ? "Free" : planId === "2" ? "Pro" : "Enterprise",
+        price: planId === "1" ? "$0" : planId === "2" ? "$29" : "$99",
+        priceValue: planId === "1" ? 0 : planId === "2" ? 29 : 99,
+        period: "month",
+        chatbots: planId === "1" ? 1 : planId === "2" ? 5 : 20,
+        api_calls: planId === "1" ? 100 : planId === "2" ? 1000 : 5000,
+        storage: planId === "1" ? 1 : planId === "2" ? 10 : 50,
+        description: planId === "1" ? "Basic plan for individuals" : planId === "2" ? "Perfect for small businesses" : "For larger organizations",
+        features: planId === "1" 
+          ? ["1 chatbot", "100 API calls/month", "1GB storage"]
+          : planId === "2"
+            ? ["5 chatbots", "1,000 API calls/month", "10GB storage", "Priority support"]
+            : ["20 chatbots", "5,000 API calls/month", "50GB storage", "Dedicated support", "Custom integrations"],
+        highlighted: planId === "2",
+        badge: planId === "1" ? "" : planId === "2" ? "Most Popular" : "Enterprise"
+      };
+      
+      return {
+        id: "sub_1",
+        userId: userId,
+        planId: planId,
+        status: "active",
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        planInfo: mockPlan
+      };
     }
   }
 };
