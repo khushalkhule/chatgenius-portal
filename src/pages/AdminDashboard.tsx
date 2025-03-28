@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -17,7 +16,6 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is authenticated as admin
   useEffect(() => {
     const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
     
@@ -84,12 +82,10 @@ const DashboardOverview = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        // Use the admin service from the API
         const response = await api.admin.getDashboardStats();
         if (response.success) {
           setStats(response.data);
         } else {
-          // Handle case where success is false but no error property exists
           const errorMessage = response.message || "Failed to fetch dashboard statistics";
           toast.error(errorMessage);
         }

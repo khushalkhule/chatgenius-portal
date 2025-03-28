@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import StepIndicator from "./StepIndicator";
 import BasicInfoStep from "./steps/BasicInfoStep";
@@ -10,6 +9,7 @@ import SummaryStep from "./steps/SummaryStep";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useChatbots } from "@/contexts/ChatbotContext";
+import api from "@/services/api";
 
 const STEPS = ["Basic Info", "Knowledge Base", "AI Model", "Design", "Lead Form", "Summary"];
 
@@ -60,17 +60,14 @@ const ChatbotWizard = () => {
   };
   
   const handleComplete = async () => {
-    // Add the chatbot using our context which now calls the API
     const { basicInfo, design } = formData;
     
     setIsCreating(true);
     
     try {
-      // Create a more complete chatbot object before submission
       const chatbotData = {
         name: basicInfo?.name || "Unnamed Chatbot",
         description: basicInfo?.description || "",
-        // Include all form data
         basicInfo,
         knowledgeBase: formData.knowledgeBase,
         aiModel: formData.aiModel,
@@ -82,7 +79,6 @@ const ChatbotWizard = () => {
       
       toast.success("Chatbot created successfully!");
       
-      // After successful creation, redirect to dashboard
       setTimeout(() => {
         navigate("/dashboard/chatbots");
       }, 1500);

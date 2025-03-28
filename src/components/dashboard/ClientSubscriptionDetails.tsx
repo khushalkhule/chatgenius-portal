@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,39 +17,34 @@ import {
 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "sonner";
+import { useQuery } from "react-query";
 
 export const ClientSubscriptionDetails = () => {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  const { data, isLoading: isLoadingQuery, error } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: async () => {
+      const response = await api.subscription.getSubscription();
+      return response;
+    }
+  });
+
   useEffect(() => {
-    const fetchSubscription = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.subscriptions.getSubscription();
-        if (response.success) {
-          setSubscription(response.data);
-        } else {
-          toast.error(response.message || "Failed to fetch subscription details");
-        }
-      } catch (error) {
-        console.error("Error fetching subscription:", error);
-        toast.error("Failed to load subscription data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (error) {
+      toast.error(error.message || "Failed to fetch subscription details");
+    }
+  }, [error]);
 
-    fetchSubscription();
-  }, []);
-  
-  const handleDownloadInvoice = (invoiceId) => {
-    console.log(`Downloading invoice ${invoiceId}`);
-    toast.success(`Invoice ${invoiceId} downloaded`);
-  };
+  useEffect(() => {
+    if (data) {
+      setSubscription(data);
+    }
+  }, [data]);
 
-  if (isLoading) {
+  if (isLoadingQuery) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />

@@ -12,7 +12,7 @@ import { PlusCircle, Pencil, Trash2, Check, X, DollarSign, Server, Database, Use
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { api } from "@/services/api";
+import api from "@/services/api";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { SubscriptionPlan } from "@/contexts/SubscriptionContext";
