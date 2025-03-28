@@ -65,6 +65,17 @@ const ChatbotManager = () => {
     toast.success("Embed code copied to clipboard");
   };
   
+  // Prepare initial messages if any
+  let initialMessages = [];
+  if (chatbot.design?.initialMessage) {
+    initialMessages.push({
+      id: "initial",
+      content: chatbot.design.initialMessage || "Hi there! How can I help you today?",
+      isBot: true,
+      timestamp: new Date()
+    });
+  }
+  
   return (
     <DashboardLayout>
       <Helmet>
@@ -121,9 +132,7 @@ const ChatbotManager = () => {
               <ChatInterface 
                 botName={chatbot.name}
                 placeholder={chatbot.design?.placeholder || "Type your message..."}
-                initialMessages={chatbot.design?.suggestedMessages ? 
-                  [{ id: "initial", content: chatbot.design.initialMessage || "Hi there! How can I help you today?", isBot: true, timestamp: new Date() }] : 
-                  []}
+                initialMessages={initialMessages}
               />
             </div>
           </TabsContent>

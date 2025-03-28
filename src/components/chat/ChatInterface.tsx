@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,10 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/components/ui/use-toast";
-import { useChatbots } from "@/contexts/ChatbotContext";
+import { useToast } from "@/hooks/use-toast";
 import { useParams } from 'react-router-dom';
-import { initializeDatabase } from "@/services/api";
 import api from "@/services/api";
 
 interface ChatMessage {
@@ -17,72 +16,57 @@ interface ChatMessage {
   sender: 'user' | 'bot';
 }
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+  className?: string;
+  botName?: string;
+  placeholder?: string;
+  initialMessages?: Array<{
+    id: string;
+    content: string;
+    isBot: boolean;
+    timestamp: Date;
+  }>;
+  suggestedMessages?: string[];
+  showLeadForm?: boolean;
+  aiModelConfig?: {
+    model: string;
+    temperature: number;
+    apiKey: string;
+    systemPrompt: string;
+  };
+  preserveFormatting?: boolean;
+  chatbotId?: string;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  className = '',
+  botName = 'Chatbot',
+  placeholder = 'Type your message...',
+  initialMessages = [],
+  suggestedMessages = [],
+  showLeadForm = false,
+  aiModelConfig,
+  preserveFormatting = false,
+  chatbotId
+}) => {
   const { toast } = useToast();
-  const { chatbotId } = useParams<{ chatbotId: string }>();
-  const { getChatbot } = useChatbots();
+  const { chatbotId: urlChatbotId } = useParams<{ chatbotId: string }>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const [chatbotName, setChatbotName] = useState<string>('Chatbot');
-  const [initialMessage, setInitialMessage] = useState<string>('');
-  const [suggestedMessages, setSuggestedMessages] = useState<string[]>([]);
-  const [placeholder, setPlaceholder] = useState<string>('Type your message...');
+  const activeChatbotId = chatbotId || urlChatbotId;
   
+  // Convert initialMessages to the format used by ChatInterface
   useEffect(() => {
-    const fetchChatbotDetails = async () => {
-      if (chatbotId) {
-        try {
-          // Initialize the mock database
-          await initializeDatabase();
-          
-          // Fetch chatbot details using the chatbot ID
-          const chatbot = await api.chatbots.getChatbotById(chatbotId);
-          
-          if (chatbot) {
-            // Set the chatbot name
-            setChatbotName(chatbot.configuration?.design?.name || 'Chatbot');
-            
-            // Set the initial message
-            setInitialMessage(chatbot.configuration?.design?.initialMessage || '');
-            
-            // Set the suggested messages
-            const suggestedMessagesStr = chatbot.configuration?.design?.suggestedMessages || '';
-            setSuggestedMessages(suggestedMessagesStr.split('\n'));
-            
-            // Set the placeholder
-            setPlaceholder(chatbot.configuration?.design?.placeholder || 'Type your message...');
-          } else {
-            toast({
-              title: "Error",
-              description: "Failed to load chatbot details.",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching chatbot details:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load chatbot details.",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-    
-    fetchChatbotDetails();
-  }, [chatbotId, getChatbot, toast]);
-  
-  useEffect(() => {
-    if (initialMessage) {
-      setMessages([{
-        id: 'initial-message',
-        text: initialMessage,
-        sender: 'bot'
-      }]);
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages.map(msg => ({
+        id: msg.id,
+        text: msg.content,
+        sender: msg.isBot ? 'bot' : 'user'
+      })));
     }
-  }, [initialMessage]);
+  }, [initialMessages]);
 
   useEffect(() => {
     // Scroll to the bottom of the chat container when messages change
@@ -123,9 +107,9 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full ${className}`}>
       <div className="border-b border-border p-4">
-        <h2 className="text-lg font-semibold">{chatbotName}</h2>
+        <h2 className="text-lg font-semibold">{botName}</h2>
       </div>
 
       <div className="flex-1 overflow-hidden">
