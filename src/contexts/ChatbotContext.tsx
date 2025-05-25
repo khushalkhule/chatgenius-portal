@@ -22,6 +22,7 @@ export interface Chatbot {
 interface ChatbotContextType {
   chatbots: Chatbot[];
   loading: boolean;
+  isLoading: boolean; // Add alias for compatibility
   error: string | null;
   getChatbot: (id: string) => Chatbot | undefined;
   createChatbot: (chatbot: Omit<Chatbot, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'conversations' | 'leads'>) => Promise<Chatbot | null>;
@@ -153,6 +154,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         chatbots,
         loading,
+        isLoading: loading, // Add alias for compatibility
         error,
         getChatbot,
         createChatbot,

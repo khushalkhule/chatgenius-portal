@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface KnowledgeBase {
@@ -54,8 +53,8 @@ export const knowledgeBaseService = {
         id: kb.id,
         chatbotId: kb.chatbot_id,
         name: kb.name,
-        type: kb.type,
-        status: kb.status,
+        type: kb.type as 'website' | 'file' | 'text' | 'faq',
+        status: kb.status as 'active' | 'inactive',
         content: kb.content,
         filePath: kb.file_path,
         createdAt: kb.created_at,
@@ -106,8 +105,8 @@ export const knowledgeBaseService = {
         id: data.id,
         chatbotId: data.chatbot_id,
         name: data.name,
-        type: data.type,
-        status: data.status,
+        type: data.type as 'website' | 'file' | 'text' | 'faq',
+        status: data.status as 'active' | 'inactive',
         content: data.content,
         filePath: data.file_path,
         createdAt: data.created_at,

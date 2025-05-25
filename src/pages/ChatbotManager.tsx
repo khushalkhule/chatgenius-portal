@@ -47,11 +47,6 @@ const ChatbotManager = () => {
   };
   
   const getEmbedCode = () => {
-    if (!chatbot.basicInfo?.websiteUrl) {
-      toast.error("Website URL is not configured. Please update your chatbot.");
-      return;
-    }
-    
     const embedCode = `<script>
   window.chatbotConfig = {
     id: "${chatbot.id}",
@@ -151,23 +146,23 @@ const ChatbotManager = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-sm font-medium mb-1">Name</h4>
-                      <p className="text-sm text-muted-foreground">{chatbot.basicInfo?.name || chatbot.name}</p>
+                      <p className="text-sm text-muted-foreground">{chatbot.name}</p>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium mb-1">Team</h4>
-                      <p className="text-sm text-muted-foreground">{chatbot.basicInfo?.team || "Not specified"}</p>
+                      <h4 className="text-sm font-medium mb-1">Description</h4>
+                      <p className="text-sm text-muted-foreground">{chatbot.description || "Not specified"}</p>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium mb-1">Website URL</h4>
+                      <h4 className="text-sm font-medium mb-1">Status</h4>
                       <p className="text-sm text-muted-foreground flex items-center">
-                        <Globe className="h-3 w-3 mr-1" /> 
-                        {chatbot.basicInfo?.websiteUrl || "Not specified"}
+                        <span className={`inline-block w-2 h-2 rounded-full mr-2 ${chatbot.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}`} />
+                        {chatbot.status}
                       </p>
                     </div>
                     <div>
                       <h4 className="text-sm font-medium mb-1">Created On</h4>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(chatbot.createdAt).toLocaleDateString()}
+                        {new Date(chatbot.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -178,7 +173,7 @@ const ChatbotManager = () => {
                   <div>
                     <h4 className="text-sm font-medium mb-1">Selected Model</h4>
                     <p className="text-sm text-muted-foreground">
-                      {chatbot.aiModel?.model || "Default AI model"}
+                      {chatbot.ai_model?.model || "Default AI model"}
                     </p>
                   </div>
                 </div>

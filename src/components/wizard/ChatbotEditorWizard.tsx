@@ -103,34 +103,27 @@ export const ChatbotEditorWizard = ({ chatbot, onClose }: ChatbotEditorWizardPro
         )}
         {currentStep === 2 && (
           <KnowledgeBaseStep
-            data={chatbotData.knowledgeBase}
-            onUpdate={(value) => updateChatbotData("knowledgeBase", value)}
             onNext={handleNext}
-            onPrev={handlePrev}
+            onBack={handlePrev}
+            chatbotId={chatbot.id}
           />
         )}
         {currentStep === 3 && (
           <AIModelStep
-            data={chatbotData.ai_model}
-            onUpdate={(value) => updateChatbotData("ai_model", value)}
             onNext={handleNext}
-            onPrev={handlePrev}
+            onBack={handlePrev}
           />
         )}
         {currentStep === 4 && (
           <DesignStep
-            data={chatbotData.design}
-            onUpdate={(value) => updateChatbotData("design", value)}
             onNext={handleNext}
-            onPrev={handlePrev}
+            onBack={handlePrev}
           />
         )}
         {currentStep === 5 && (
           <LeadFormStep
-            data={chatbotData.lead_form}
-            onUpdate={(value) => updateChatbotData("lead_form", value)}
             onNext={handleNext}
-            onPrev={handlePrev}
+            onBack={handlePrev}
           />
         )}
         {currentStep === 6 && (
