@@ -2,26 +2,30 @@
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 
-interface StepIndicatorProps {
-  currentStep: number;
-  totalSteps: number;
-  labels: string[];
+interface Step {
+  number: number;
+  title: string;
+  completed: boolean;
 }
 
-const StepIndicator = ({ currentStep, totalSteps, labels }: StepIndicatorProps) => {
+interface StepIndicatorProps {
+  steps: Step[];
+  currentStep: number;
+}
+
+const StepIndicator = ({ steps, currentStep }: StepIndicatorProps) => {
   return (
     <div className="mb-8">
       <div className="flex justify-between">
-        {Array.from({ length: totalSteps }).map((_, index) => {
-          const stepNumber = index + 1;
-          const isActive = stepNumber === currentStep;
-          const isCompleted = stepNumber < currentStep;
+        {steps.map((step, index) => {
+          const isActive = step.number === currentStep;
+          const isCompleted = step.completed;
           
           return (
             <div 
               key={index} 
               className="flex flex-col items-center relative"
-              style={{ width: `${100 / totalSteps}%` }}
+              style={{ width: `${100 / steps.length}%` }}
             >
               <div 
                 className={cn(
@@ -34,7 +38,7 @@ const StepIndicator = ({ currentStep, totalSteps, labels }: StepIndicatorProps) 
                 {isCompleted ? (
                   <Check className="h-5 w-5" />
                 ) : (
-                  <span>{stepNumber}</span>
+                  <span>{step.number}</span>
                 )}
               </div>
               
@@ -46,11 +50,11 @@ const StepIndicator = ({ currentStep, totalSteps, labels }: StepIndicatorProps) 
                   !isActive && !isCompleted && "text-muted-foreground"
                 )}
               >
-                {labels[index]}
+                {step.title}
               </span>
               
               {/* Connecting line */}
-              {index < totalSteps - 1 && (
+              {index < steps.length - 1 && (
                 <div 
                   className={cn(
                     "absolute top-5 h-0.5 transition-all",

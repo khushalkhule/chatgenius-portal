@@ -5,56 +5,52 @@ import ChatInterface from "@/components/chat/ChatInterface";
 import { Globe, Bot, Paintbrush, MessageSquare, Check } from "lucide-react";
 
 interface SummaryStepProps {
-  formData: {
-    basicInfo?: {
-      name: string;
-      description?: string;
-      team?: string;
-    };
+  data: {
+    name: string;
+    description?: string;
+    status?: "active" | "paused";
     knowledgeBase?: {
-      sourceType: string;
-      url?: string;
-      file?: string;
+      type: string;
       content?: string;
-      faqs?: string;
+      urls?: any[];
+      faqs?: any[];
     };
-    aiModel?: {
-      model: string;
-      temperature: number;
-      maxTokens: number;
+    ai_model?: {
+      provider?: string;
+      model?: string;
+      temperature?: number;
+      max_tokens?: number;
     };
     design?: {
-      theme: string;
-      initialMessage: string;
-      suggestedMessages?: string;
+      theme?: string;
+      primaryColor?: string;
+      position?: string;
+      initialMessage?: string;
       placeholder?: string;
-      footerLinks?: string;
-      name: string;
-      userMessageColor?: string;
-      autoOpenDelay?: number;
+      name?: string;
     };
-    leadForm?: {
+    lead_form?: {
       enabled: boolean;
-      title: string;
+      title?: string;
       description?: string;
-      fields: Array<{
+      fields?: Array<{
         id: string;
         name: string;
         label: string;
         type: string;
         required: boolean;
       }>;
-      buttonText: string;
-      successMessage: string;
+      buttonText?: string;
+      successMessage?: string;
     };
   };
-  onBack: () => void;
-  onComplete: () => void;
-  isSubmitting?: boolean; // Added this prop
+  onPrev: () => void;
+  onSubmit: () => void;
+  isSubmitting?: boolean;
 }
 
-const SummaryStep = ({ formData, onBack, onComplete, isSubmitting = false }: SummaryStepProps) => {
-  const { basicInfo, knowledgeBase, aiModel, design, leadForm } = formData;
+const SummaryStep = ({ data, onPrev, onSubmit, isSubmitting = false }: SummaryStepProps) => {
+  const { name, description, knowledgeBase, ai_model, design, lead_form } = data;
 
   return (
     <Card className="w-full">
@@ -73,12 +69,9 @@ const SummaryStep = ({ formData, onBack, onComplete, isSubmitting = false }: Sum
                 <div>
                   <h3 className="text-lg font-semibold">Basic Information</h3>
                   <div className="text-sm mt-2 space-y-1">
-                    <p><span className="font-medium">Name:</span> {basicInfo?.name}</p>
-                    {basicInfo?.description && (
-                      <p><span className="font-medium">Description:</span> {basicInfo.description}</p>
-                    )}
-                    {basicInfo?.team && (
-                      <p><span className="font-medium">Team:</span> {basicInfo.team}</p>
+                    <p><span className="font-medium">Name:</span> {name}</p>
+                    {description && (
+                      <p><span className="font-medium">Description:</span> {description}</p>
                     )}
                   </div>
                 </div>
@@ -93,20 +86,14 @@ const SummaryStep = ({ formData, onBack, onComplete, isSubmitting = false }: Sum
                   <div className="text-sm mt-2 space-y-1">
                     <p>
                       <span className="font-medium">Source Type:</span>{" "}
-                      {knowledgeBase?.sourceType === "website"
+                      {knowledgeBase?.type === "website"
                         ? "Website"
-                        : knowledgeBase?.sourceType === "file"
+                        : knowledgeBase?.type === "file"
                         ? "File Upload"
-                        : knowledgeBase?.sourceType === "text"
+                        : knowledgeBase?.type === "text"
                         ? "Direct Text"
                         : "FAQ"}
                     </p>
-                    {knowledgeBase?.url && (
-                      <p><span className="font-medium">URL:</span> {knowledgeBase.url}</p>
-                    )}
-                    {knowledgeBase?.file && (
-                      <p><span className="font-medium">File:</span> {knowledgeBase.file}</p>
-                    )}
                     {knowledgeBase?.content && (
                       <p>
                         <span className="font-medium">Content:</span>{" "}
@@ -128,15 +115,15 @@ const SummaryStep = ({ formData, onBack, onComplete, isSubmitting = false }: Sum
                   <div className="text-sm mt-2 space-y-1">
                     <p>
                       <span className="font-medium">Model:</span>{" "}
-                      {aiModel?.model === "gpt-4o-mini" ? "GPT-4o Mini" : "GPT-4o"}
+                      {ai_model?.model === "gpt-4o-mini" ? "GPT-4o Mini" : "GPT-4o"}
                     </p>
                     <p>
                       <span className="font-medium">Temperature:</span>{" "}
-                      {aiModel?.temperature}
+                      {ai_model?.temperature}
                     </p>
                     <p>
                       <span className="font-medium">Max Tokens:</span>{" "}
-                      {aiModel?.maxTokens}
+                      {ai_model?.max_tokens}
                     </p>
                   </div>
                 </div>
@@ -151,16 +138,16 @@ const SummaryStep = ({ formData, onBack, onComplete, isSubmitting = false }: Sum
                   <div className="text-sm mt-2 space-y-1">
                     <p>
                       <span className="font-medium">Enabled:</span>{" "}
-                      {leadForm?.enabled ? "Yes" : "No"}
+                      {lead_form?.enabled ? "Yes" : "No"}
                     </p>
-                    {leadForm?.enabled && (
+                    {lead_form?.enabled && (
                       <>
                         <p>
-                          <span className="font-medium">Title:</span> {leadForm.title}
+                          <span className="font-medium">Title:</span> {lead_form.title}
                         </p>
                         <p>
                           <span className="font-medium">Fields:</span>{" "}
-                          {leadForm.fields.map((field) => field.label).join(", ")}
+                          {lead_form.fields?.map((field) => field.label).join(", ")}
                         </p>
                       </>
                     )}
@@ -189,10 +176,10 @@ const SummaryStep = ({ formData, onBack, onComplete, isSubmitting = false }: Sum
         </div>
 
         <div className="flex justify-between mt-10">
-          <Button type="button" variant="outline" onClick={onBack}>
+          <Button type="button" variant="outline" onClick={onPrev}>
             Back
           </Button>
-          <Button onClick={onComplete} className="gap-2" disabled={isSubmitting}>
+          <Button onClick={onSubmit} className="gap-2" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

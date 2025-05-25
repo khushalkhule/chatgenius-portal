@@ -19,23 +19,35 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface BasicInfoStepProps {
-  onNext: (data: FormValues) => void;
-  initialData?: FormValues;
+  data: {
+    name: string;
+    description?: string;
+    team?: string;
+    websiteUrl?: string;
+  };
+  onUpdate: (field: string, value: any) => void;
+  onNext: () => void;
 }
 
-const BasicInfoStep = ({ onNext, initialData }: BasicInfoStepProps) => {
+const BasicInfoStep = ({ data, onUpdate, onNext }: BasicInfoStepProps) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      name: "",
-      description: "",
-      team: "",
-      websiteUrl: "",
+    defaultValues: {
+      name: data.name || "",
+      description: data.description || "",
+      team: data.team || "",
+      websiteUrl: data.websiteUrl || "",
     },
   });
 
-  const handleSubmit = (data: FormValues) => {
-    onNext(data);
+  const handleSubmit = (formData: FormValues) => {
+    // Update the wizard data
+    onUpdate("name", formData.name);
+    if (formData.description) onUpdate("description", formData.description);
+    if (formData.team) onUpdate("team", formData.team);
+    if (formData.websiteUrl) onUpdate("websiteUrl", formData.websiteUrl);
+    
+    onNext();
   };
 
   return (
