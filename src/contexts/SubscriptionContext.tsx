@@ -1,9 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import api from "@/services/api";
+import { supabaseService } from "@/services/supabaseService";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// Define the subscription plan type
 export interface SubscriptionPlan {
   id: string;
   name: string;
@@ -47,24 +47,23 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  // Fetch subscription plans on initial render
   useEffect(() => {
     const fetchPlans = async () => {
       setLoading(true);
       try {
-        const result = await api.subscriptions.getAllPlans();
+        const result = await supabaseService.subscriptions.getAllPlans();
         
-        // Transform database result to match our SubscriptionPlan interface
         const formattedPlans = result.map((plan: any) => ({
           id: plan.id,
           name: plan.name,
           price: plan.price,
-          priceValue: Number(plan.priceValue || 0),
+          priceValue: Number(plan.price_value || 0),
           period: plan.period,
-          priceMonthly: plan.priceMonthly,
-          priceMonthlyValue: plan.priceMonthlyValue ? 
-            Number(plan.priceMonthlyValue) : undefined,
+          priceMonthly: plan.price_monthly,
+          priceMonthlyValue: plan.price_monthly_value ? 
+            Number(plan.price_monthly_value) : undefined,
           chatbots: Number(plan.chatbots),
           apiCalls: Number(plan.api_calls || 0),
           storage: Number(plan.storage),
@@ -75,51 +74,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }));
         
         setPlans(formattedPlans);
-        
-        // Try to get current user's subscription
-        const userId = localStorage.getItem("userId");
-        if (userId) {
-          const subscription = await api.subscriptions.getUserSubscription(userId);
-          if (subscription) {
-            // Transform to match UserSubscription interface
-            const formattedSubscription: UserSubscription = {
-              id: subscription.id,
-              userId: subscription.userId,
-              planId: subscription.planId,
-              status: subscription.status as 'active' | 'cancelled' | 'trial' | 'expired',
-              createdAt: subscription.createdAt,
-              updatedAt: subscription.updatedAt,
-              planInfo: subscription.planInfo ? {
-                id: subscription.planInfo.id,
-                name: subscription.planInfo.name,
-                price: subscription.planInfo.price,
-                priceValue: Number(subscription.planInfo.priceValue || 0),
-                period: subscription.planInfo.period,
-                priceMonthly: subscription.planInfo.priceMonthly,
-                priceMonthlyValue: subscription.planInfo.priceMonthlyValue ? 
-                  Number(subscription.planInfo.priceMonthlyValue) : undefined,
-                chatbots: Number(subscription.planInfo.chatbots),
-                apiCalls: Number(subscription.planInfo.api_calls || 0),
-                storage: Number(subscription.planInfo.storage),
-                description: subscription.planInfo.description || '',
-                features: Array.isArray(subscription.planInfo.features) ? subscription.planInfo.features : [],
-                highlighted: Boolean(subscription.planInfo.highlighted),
-                badge: subscription.planInfo.badge || ''
-              } : undefined
-            };
-            
-            setCurrentSubscription(formattedSubscription);
-          }
-        }
+        setError(null);
       } catch (err) {
         console.error("Failed to fetch subscription plans:", err);
         setError("Failed to load subscription plans. Please try again later.");
-        
-        // Fallback to localStorage if database fails
-        const savedPlans = localStorage.getItem("subscriptionPlans");
-        if (savedPlans) {
-          setPlans(JSON.parse(savedPlans));
-        }
       } finally {
         setLoading(false);
       }
@@ -128,41 +86,79 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     fetchPlans();
   }, []);
 
-  // Save plans to localStorage as a backup
   useEffect(() => {
-    if (!loading && plans.length > 0) {
-      localStorage.setItem("subscriptionPlans", JSON.stringify(plans));
-    }
-  }, [plans, loading]);
+    const fetchUserSubscription = async () => {
+      if (!user) {
+        setCurrentSubscription(null);
+        return;
+      }
+
+      try {
+        const subscription = await supabaseService.subscriptions.getUserSubscription(user.id);
+        if (subscription) {
+          const formattedSubscription: UserSubscription = {
+            id: subscription.id,
+            userId: subscription.user_id,
+            planId: subscription.plan_id,
+            status: subscription.status as 'active' | 'cancelled' | 'trial' | 'expired',
+            createdAt: subscription.created_at,
+            updatedAt: subscription.updated_at,
+            planInfo: subscription.plan ? {
+              id: subscription.plan.id,
+              name: subscription.plan.name,
+              price: subscription.plan.price,
+              priceValue: Number(subscription.plan.price_value || 0),
+              period: subscription.plan.period,
+              priceMonthly: subscription.plan.price_monthly,
+              priceMonthlyValue: subscription.plan.price_monthly_value ? 
+                Number(subscription.plan.price_monthly_value) : undefined,
+              chatbots: Number(subscription.plan.chatbots),
+              apiCalls: Number(subscription.plan.api_calls || 0),
+              storage: Number(subscription.plan.storage),
+              description: subscription.plan.description || '',
+              features: Array.isArray(subscription.plan.features) ? subscription.plan.features : [],
+              highlighted: Boolean(subscription.plan.highlighted),
+              badge: subscription.plan.badge || ''
+            } : undefined
+          };
+          
+          setCurrentSubscription(formattedSubscription);
+        }
+      } catch (err) {
+        console.error("Failed to get user subscription:", err);
+      }
+    };
+
+    fetchUserSubscription();
+  }, [user]);
 
   const getUserSubscription = async (userId: string): Promise<UserSubscription | null> => {
     try {
-      const subscription = await api.subscriptions.getUserSubscription(userId);
+      const subscription = await supabaseService.subscriptions.getUserSubscription(userId);
       if (subscription) {
-        // Transform to match UserSubscription interface
         const formattedSubscription: UserSubscription = {
           id: subscription.id,
-          userId: subscription.userId,
-          planId: subscription.planId,
+          userId: subscription.user_id,
+          planId: subscription.plan_id,
           status: subscription.status as 'active' | 'cancelled' | 'trial' | 'expired',
-          createdAt: subscription.createdAt,
-          updatedAt: subscription.updatedAt,
-          planInfo: subscription.planInfo ? {
-            id: subscription.planInfo.id,
-            name: subscription.planInfo.name,
-            price: subscription.planInfo.price,
-            priceValue: Number(subscription.planInfo.priceValue || 0),
-            period: subscription.planInfo.period,
-            priceMonthly: subscription.planInfo.priceMonthly,
-            priceMonthlyValue: subscription.planInfo.priceMonthlyValue ? 
-              Number(subscription.planInfo.priceMonthlyValue) : undefined,
-            chatbots: Number(subscription.planInfo.chatbots),
-            apiCalls: Number(subscription.planInfo.api_calls || 0),
-            storage: Number(subscription.planInfo.storage),
-            description: subscription.planInfo.description || '',
-            features: Array.isArray(subscription.planInfo.features) ? subscription.planInfo.features : [],
-            highlighted: Boolean(subscription.planInfo.highlighted),
-            badge: subscription.planInfo.badge || ''
+          createdAt: subscription.created_at,
+          updatedAt: subscription.updated_at,
+          planInfo: subscription.plan ? {
+            id: subscription.plan.id,
+            name: subscription.plan.name,
+            price: subscription.plan.price,
+            priceValue: Number(subscription.plan.price_value || 0),
+            period: subscription.plan.period,
+            priceMonthly: subscription.plan.price_monthly,
+            priceMonthlyValue: subscription.plan.price_monthly_value ? 
+              Number(subscription.plan.price_monthly_value) : undefined,
+            chatbots: Number(subscription.plan.chatbots),
+            apiCalls: Number(subscription.plan.api_calls || 0),
+            storage: Number(subscription.plan.storage),
+            description: subscription.plan.description || '',
+            features: Array.isArray(subscription.plan.features) ? subscription.plan.features : [],
+            highlighted: Boolean(subscription.plan.highlighted),
+            badge: subscription.plan.badge || ''
           } : undefined
         };
         
@@ -179,37 +175,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   const updateUserSubscription = async (userId: string, planId: string) => {
     try {
-      const updatedSubscription = await api.subscriptions.updateUserSubscription(userId, planId);
-      if (updatedSubscription) {
-        // Transform to match UserSubscription interface
-        const formattedSubscription: UserSubscription = {
-          id: updatedSubscription.id,
-          userId: updatedSubscription.userId,
-          planId: updatedSubscription.planId,
-          status: updatedSubscription.status as 'active' | 'cancelled' | 'trial' | 'expired',
-          createdAt: updatedSubscription.createdAt,
-          updatedAt: updatedSubscription.updatedAt,
-          planInfo: updatedSubscription.planInfo ? {
-            id: updatedSubscription.planInfo.id,
-            name: updatedSubscription.planInfo.name,
-            price: updatedSubscription.planInfo.price,
-            priceValue: Number(updatedSubscription.planInfo.priceValue || 0),
-            period: updatedSubscription.planInfo.period,
-            priceMonthly: updatedSubscription.planInfo.priceMonthly,
-            priceMonthlyValue: updatedSubscription.planInfo.priceMonthlyValue ? 
-              Number(updatedSubscription.planInfo.priceMonthlyValue) : undefined,
-            chatbots: Number(updatedSubscription.planInfo.chatbots),
-            apiCalls: Number(updatedSubscription.planInfo.api_calls || 0),
-            storage: Number(updatedSubscription.planInfo.storage),
-            description: updatedSubscription.planInfo.description || '',
-            features: Array.isArray(updatedSubscription.planInfo.features) ? updatedSubscription.planInfo.features : [],
-            highlighted: Boolean(updatedSubscription.planInfo.highlighted),
-            badge: updatedSubscription.planInfo.badge || ''
-          } : undefined
-        };
-        
-        setCurrentSubscription(formattedSubscription);
-      }
+      await supabaseService.subscriptions.updateUserSubscription(userId, planId);
+      
+      // Refresh the user's subscription
+      await getUserSubscription(userId);
+      
       toast.success("Subscription updated successfully!");
     } catch (err) {
       console.error("Failed to update subscription:", err);
