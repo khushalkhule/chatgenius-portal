@@ -56,14 +56,14 @@ const ChatbotPreview = () => {
     : [];
     
   // Determine if lead form should be shown
-  const showLeadForm = chatbot.leadForm?.enabled === true;
+  const showLeadForm = chatbot.lead_form?.enabled === true;
   
   // Configure the OpenAI API with the correct model and settings
   const aiModelConfig = apiKey ? {
-    model: chatbot.aiModel?.model || "gpt-4o-mini",
-    temperature: chatbot.aiModel?.temperature || 0.7,
+    model: chatbot.ai_model?.model || "gpt-4o-mini",
+    temperature: chatbot.ai_model?.temperature || 0.7,
     apiKey: apiKey,
-    systemPrompt: chatbot.aiModel?.systemPrompt || `You are an AI assistant representing ${chatbot.name}. Be helpful, concise, and friendly.`
+    systemPrompt: chatbot.ai_model?.systemPrompt || `You are an AI assistant representing ${chatbot.name}. Be helpful, concise, and friendly.`
   } : undefined;
   
   return (

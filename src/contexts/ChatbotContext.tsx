@@ -82,6 +82,7 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const newChatbot = await supabaseService.chatbots.createChatbot({
         ...chatbotData,
+        description: chatbotData.description || "",
         user_id: user.id,
         conversations: 0,
         leads: 0,

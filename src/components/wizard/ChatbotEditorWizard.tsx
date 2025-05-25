@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { useChatbots, Chatbot } from "@/contexts/ChatbotContext";
-import { StepIndicator } from "./StepIndicator";
-import { BasicInfoStep } from "./steps/BasicInfoStep";
-import { KnowledgeBaseStep } from "./steps/KnowledgeBaseStep";
-import { AIModelStep } from "./steps/AIModelStep";
-import { DesignStep } from "./steps/DesignStep";
-import { LeadFormStep } from "./steps/LeadFormStep";
-import { SummaryStep } from "./steps/SummaryStep";
+import StepIndicator from "./StepIndicator";
+import BasicInfoStep from "./steps/BasicInfoStep";
+import KnowledgeBaseStep from "./steps/KnowledgeBaseStep";
+import AIModelStep from "./steps/AIModelStep";
+import DesignStep from "./steps/DesignStep";
+import LeadFormStep from "./steps/LeadFormStep";
+import SummaryStep from "./steps/SummaryStep";
 
 interface ChatbotEditorWizardProps {
   chatbot: Chatbot;
@@ -145,3 +145,5 @@ export const ChatbotEditorWizard = ({ chatbot, onClose }: ChatbotEditorWizardPro
     </div>
   );
 };
+
+export default ChatbotEditorWizard;

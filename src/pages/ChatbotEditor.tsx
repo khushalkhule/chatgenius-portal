@@ -7,7 +7,7 @@ import AnimatedTransition from "@/components/ui-custom/AnimatedTransition";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
-import ChatbotEditorWizard from "@/components/wizard/ChatbotEditorWizard";
+import { ChatbotEditorWizard } from "@/components/wizard/ChatbotEditorWizard";
 
 const ChatbotEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +47,7 @@ const ChatbotEditor = () => {
           </p>
         </div>
         
-        <ChatbotEditorWizard chatbot={chatbot} />
+        <ChatbotEditorWizard chatbot={chatbot} onClose={() => navigate(`/chatbot/${chatbot.id}`)} />
       </AnimatedTransition>
     </DashboardLayout>
   );

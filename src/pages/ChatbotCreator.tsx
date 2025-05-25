@@ -1,6 +1,6 @@
 
 import { Helmet } from "react-helmet";
-import ChatbotWizard from "@/components/wizard/ChatbotWizard";
+import { ChatbotWizard } from "@/components/wizard/ChatbotWizard";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AnimatedTransition from "@/components/ui-custom/AnimatedTransition";
 

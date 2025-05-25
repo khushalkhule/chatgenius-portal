@@ -1,4 +1,3 @@
-
 // Mock database service that uses localStorage instead of MySQL
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,6 +11,11 @@ const collections = [
   'mockAuthTokens',
   'mockSubscriptionPlans'
 ];
+
+// Helper function to generate UUID
+const generateUUID = () => {
+  return crypto.randomUUID();
+};
 
 // Helper function to get a collection from localStorage
 const getCollection = (name: string): any[] => {
@@ -201,7 +205,7 @@ const mockQueries = {
     columns.forEach((column, index) => {
       // If ID is not provided, generate a UUID
       if (column === 'id' && (!params[index] || params[index] === '')) {
-        newItem[column] = uuidv4();
+        newItem[column] = generateUUID();
       } else {
         newItem[column] = params[index];
       }
@@ -219,7 +223,7 @@ const mockQueries = {
     collection.push(newItem);
     saveCollection(collectionName, collection);
     
-    return [{ insertId: newItem.id || newItem.ID || uuidv4() }];
+    return [{ insertId: newItem.id || newItem.ID || generateUUID() }];
   },
   
   handleUpdate: (sql: string, params: any[]): any[] => {

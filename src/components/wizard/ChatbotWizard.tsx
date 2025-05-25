@@ -1,13 +1,14 @@
+
 import { useState } from "react";
 import { useChatbots } from "@/contexts/ChatbotContext";
 import { useNavigate } from "react-router-dom";
-import { StepIndicator } from "./StepIndicator";
-import { BasicInfoStep } from "./steps/BasicInfoStep";
-import { KnowledgeBaseStep } from "./steps/KnowledgeBaseStep";
-import { AIModelStep } from "./steps/AIModelStep";
-import { DesignStep } from "./steps/DesignStep";
-import { LeadFormStep } from "./steps/LeadFormStep";
-import { SummaryStep } from "./steps/SummaryStep";
+import StepIndicator from "./StepIndicator";
+import BasicInfoStep from "./steps/BasicInfoStep";
+import KnowledgeBaseStep from "./steps/KnowledgeBaseStep";
+import AIModelStep from "./steps/AIModelStep";
+import DesignStep from "./steps/DesignStep";
+import LeadFormStep from "./steps/LeadFormStep";
+import SummaryStep from "./steps/SummaryStep";
 
 export const ChatbotWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -55,7 +56,7 @@ export const ChatbotWizard = () => {
     try {
       const chatbot = await createChatbot({
         name: chatbotData.name,
-        description: chatbotData.description,
+        description: chatbotData.description || "",
         status: chatbotData.status,
         ai_model: chatbotData.ai_model,
         design: chatbotData.design,
@@ -144,3 +145,5 @@ export const ChatbotWizard = () => {
     </div>
   );
 };
+
+export default ChatbotWizard;
