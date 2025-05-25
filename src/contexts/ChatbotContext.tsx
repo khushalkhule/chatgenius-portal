@@ -67,7 +67,10 @@ export const ChatbotProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   useEffect(() => {
-    refreshChatbots();
+    // Only refresh if user is defined (not null or undefined)
+    if (user !== undefined) {
+      refreshChatbots();
+    }
   }, [user]);
 
   const getChatbot = (id: string): Chatbot | undefined => {
