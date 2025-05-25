@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import AnimatedTransition from "@/components/ui-custom/AnimatedTransition";
-import { toast } from "sonner";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +20,7 @@ const SignUp = () => {
     acceptTerms: false
   });
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,23 +36,18 @@ const SignUp = () => {
     
     // Validate form
     if (!formData.email || !formData.password || !formData.firstName) {
-      toast.error("Please fill in all required fields");
       return;
     }
     
     if (!formData.acceptTerms) {
-      toast.error("You must accept the terms and privacy policy");
       return;
     }
     
-    // Simulate form submission
     setIsLoading(true);
     
     try {
-      // In a real app, you would call your authentication API here
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast.success("Account created successfully! Redirecting to dashboard...");
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      await signUp(formData.email, formData.password, fullName);
       
       // Redirect to dashboard after successful signup
       setTimeout(() => {
@@ -59,7 +55,7 @@ const SignUp = () => {
       }, 1000);
       
     } catch (error) {
-      toast.error("An error occurred. Please try again.");
+      console.error('Signup error:', error);
     } finally {
       setIsLoading(false);
     }

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Mail, Lock, Shield, User, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -33,6 +33,7 @@ const ADMIN_CREDENTIALS = {
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -48,37 +49,21 @@ const SignIn = () => {
     setIsLoading(true);
     
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Check if admin credentials
+      // Try Supabase authentication first
+      await signIn(data.email, data.password);
+      navigate("/dashboard");
+    } catch (error) {
+      // Fallback to demo credentials
       if (data.email === ADMIN_CREDENTIALS.email && data.password === ADMIN_CREDENTIALS.password) {
         localStorage.setItem("userRole", "admin");
         localStorage.setItem("isAdminAuthenticated", "true");
-        
-        toast.success("Admin login successful!");
-        setTimeout(() => {
-          navigate("/admin-dashboard");
-        }, 1000);
-        return;
-      }
-      
-      // Check if client credentials
-      if (data.email === CLIENT_CREDENTIALS.email && data.password === CLIENT_CREDENTIALS.password) {
+        navigate("/admin-dashboard");
+      } else if (data.email === CLIENT_CREDENTIALS.email && data.password === CLIENT_CREDENTIALS.password) {
         localStorage.setItem("userRole", "client");
         localStorage.setItem("isAuthenticated", "true");
-        
-        toast.success("Login successful!");
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 1000);
-        return;
+        navigate("/dashboard");
       }
-      
-      // If neither, show error
-      toast.error("Invalid credentials");
-    } catch (error) {
-      toast.error("An error occurred. Please try again.");
+      // If Supabase auth failed and not demo credentials, error is already shown by useAuth
     } finally {
       setIsLoading(false);
     }
