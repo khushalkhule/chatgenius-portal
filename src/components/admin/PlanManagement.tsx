@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,12 +22,12 @@ const planFormSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, "Name must be at least 2 characters"),
   price: z.string().min(1, "Price is required"),
-  priceValue: z.number().min(0, "Price value must be a positive number"),
+  price_value: z.number().min(0, "Price value must be a positive number"),
   period: z.string().min(1, "Period is required"),
-  priceMonthly: z.string().optional(),
-  priceMonthlyValue: z.number().optional(),
+  price_monthly: z.string().optional(),
+  price_monthly_value: z.number().optional(),
   chatbots: z.number().min(0, "Chatbot limit must be a positive number"),
-  apiCalls: z.number().min(0, "API call limit must be a positive number"),
+  api_calls: z.number().min(0, "API call limit must be a positive number"),
   storage: z.number().min(0, "Storage limit must be a positive number"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   features: z.array(z.string()),
@@ -49,11 +50,11 @@ export const PlanManagement = () => {
     defaultValues: {
       name: "",
       price: "",
-      priceValue: 0,
+      price_value: 0,
       period: "yearly",
-      priceMonthly: "",
+      price_monthly: "",
       chatbots: 1,
-      apiCalls: 1000,
+      api_calls: 1000,
       storage: 1,
       description: "",
       features: [],
@@ -75,17 +76,19 @@ export const PlanManagement = () => {
         id: plan.id,
         name: plan.name,
         price: plan.price,
-        priceValue: Number(plan.priceValue),
+        price_value: Number(plan.price_value),
         period: plan.period,
-        priceMonthly: plan.priceMonthly,
-        priceMonthlyValue: plan.priceMonthlyValue ? Number(plan.priceMonthlyValue) : undefined,
+        price_monthly: plan.price_monthly,
+        price_monthly_value: plan.price_monthly_value ? Number(plan.price_monthly_value) : undefined,
         chatbots: Number(plan.chatbots),
-        apiCalls: Number(plan.api_calls || 0),
+        api_calls: Number(plan.api_calls || 0),
         storage: Number(plan.storage),
         description: plan.description,
         features: Array.isArray(plan.features) ? plan.features : [],
         highlighted: Boolean(plan.highlighted),
-        badge: plan.badge || ''
+        badge: plan.badge || '',
+        created_at: plan.created_at,
+        updated_at: plan.updated_at
       }));
       
       setPlans(formattedPlans);
@@ -160,11 +163,11 @@ export const PlanManagement = () => {
     form.reset({
       name: "",
       price: "",
-      priceValue: 0,
+      price_value: 0,
       period: "yearly",
-      priceMonthly: "",
+      price_monthly: "",
       chatbots: 1,
-      apiCalls: 1000,
+      api_calls: 1000,
       storage: 1,
       description: "",
       features: [],
@@ -250,7 +253,7 @@ export const PlanManagement = () => {
                         
                         <FormField
                           control={form.control}
-                          name="priceValue"
+                          name="price_value"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Price Value (in USD)</FormLabel>
@@ -288,7 +291,7 @@ export const PlanManagement = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
-                          name="priceMonthly"
+                          name="price_monthly"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Monthly Price Display (Optional)</FormLabel>
@@ -302,7 +305,7 @@ export const PlanManagement = () => {
                         
                         <FormField
                           control={form.control}
-                          name="priceMonthlyValue"
+                          name="price_monthly_value"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Monthly Price Value (Optional)</FormLabel>
@@ -364,7 +367,7 @@ export const PlanManagement = () => {
                         
                         <FormField
                           control={form.control}
-                          name="apiCalls"
+                          name="api_calls"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Monthly API Calls</FormLabel>
@@ -543,8 +546,8 @@ export const PlanManagement = () => {
                   <CardContent className="pb-2">
                     <div className="mb-4">
                       <p className="text-2xl font-bold">{plan.price}</p>
-                      {plan.priceMonthly && (
-                        <p className="text-sm text-muted-foreground">{plan.priceMonthly}</p>
+                      {plan.price_monthly && (
+                        <p className="text-sm text-muted-foreground">{plan.price_monthly}</p>
                       )}
                     </div>
                     
@@ -555,7 +558,7 @@ export const PlanManagement = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Server className="h-4 w-4 text-muted-foreground" />
-                        <span>{plan.apiCalls.toLocaleString()} API calls/mo</span>
+                        <span>{plan.api_calls.toLocaleString()} API calls/mo</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Database className="h-4 w-4 text-muted-foreground" />
