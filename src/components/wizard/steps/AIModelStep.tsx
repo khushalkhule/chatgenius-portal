@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Brain, Cpu, Sparkles, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -14,6 +15,7 @@ const formSchema = z.object({
   model: z.enum(["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet"]),
   temperature: z.number().min(0).max(1),
   maxTokens: z.number().min(100).max(4000),
+  systemPrompt: z.string().optional(),
   apiKey: z.string().optional(),
 });
 
@@ -29,13 +31,22 @@ const AIModelStep = ({ onNext, onBack, initialData }: AIModelStepProps) => {
   const [adminApiKey, setAdminApiKey] = useState<string | null>(null);
 
   useEffect(() => {
-    // Try to get admin API key from localStorage (set by admin dashboard)
-    const storedKey = localStorage.getItem("adminOpenAIKey");
+    // Get API key from admin storage
+    const storedKeys = localStorage.getItem("adminApiKeys");
+    let openaiKey = null;
     
-    // If no key in localStorage, use the default one
-    const defaultKey = "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";
+    if (storedKeys) {
+      const apiKeys = JSON.parse(storedKeys);
+      const openaiKeyObj = apiKeys.find((key: any) => key.provider === "openai");
+      openaiKey = openaiKeyObj?.key;
+    }
     
-    setAdminApiKey(storedKey || defaultKey);
+    // Fallback to the default key if no admin key is set
+    if (!openaiKey) {
+      openaiKey = "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";
+    }
+    
+    setAdminApiKey(openaiKey);
   }, []);
 
   const form = useForm<FormValues>({
@@ -44,12 +55,13 @@ const AIModelStep = ({ onNext, onBack, initialData }: AIModelStepProps) => {
       model: "gpt-4o-mini",
       temperature: 0.7,
       maxTokens: 2000,
-      apiKey: "", // This will be set by the admin API key
+      systemPrompt: "",
+      apiKey: "",
     },
   });
 
   const handleSubmit = (data: FormValues) => {
-    // Always use the admin API key, not exposing it to the client
+    // Always use the admin API key
     data.apiKey = adminApiKey || "";
     onNext(data);
   };
@@ -60,6 +72,9 @@ const AIModelStep = ({ onNext, onBack, initialData }: AIModelStepProps) => {
         <CardTitle>AI Model Selection</CardTitle>
         <CardDescription>
           Choose and configure the AI model that will power your chatbot.
+          {adminApiKey && (
+            <span className="block mt-2 text-green-600 text-sm">✓ Using admin OpenAI API key</span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -200,6 +215,27 @@ const AIModelStep = ({ onNext, onBack, initialData }: AIModelStepProps) => {
                   <FormDescription className="flex justify-between">
                     <span>Shorter responses</span>
                     <span>Longer responses</span>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="systemPrompt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Custom System Prompt (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add specific instructions for how your chatbot should behave..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Customize how your chatbot responds. This will be combined with knowledge base content.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
